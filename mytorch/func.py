@@ -300,3 +300,30 @@ def avg_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int |
 
 def max_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
     return corr2d_impl(input, op=torch.max, kernel_size=kernel_size, padding=padding, stride=stride)
+
+
+def dropout(X: torch.Tensor, dropout: float) -> Tensor:
+    assert 0 <= dropout <= 1
+    if dropout == 1:
+        return torch.zeros_like(X)
+    if dropout == 0:
+        return X
+    mask = (torch.rand(X.shape) > dropout).float()
+    return mask * X / (1.0 - dropout)
+
+
+def relu(x: Tensor) -> Tensor:
+    zero = torch.zeros_like(x)
+    return torch.max(x, zero)
+
+
+def softmax(logits: Tensor):
+    """
+    logits: shape=(batch_size, num_labels)
+    """
+    exp_logits = torch.exp(logits)
+    # 将每一行的exp求和，并且保持dim
+    sumexp_logits = torch.sum(exp_logits, dim=1, keepdim=True)
+    # 保持dim才能保证这里的boardcasting是沿行扩展的
+    p_matrix = exp_logits / sumexp_logits
+    return p_matrix
