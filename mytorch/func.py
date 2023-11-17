@@ -6,10 +6,9 @@ import torch
 # https://pytorch.org/docs/stable/tensors.html
 # LongTensor: dtype = 64bit signed integer
 from torch import Tensor
-from torch import LongTensor
+# from torch import LongTensor
 from typing import Callable
 from . import config
-
 
 # Takes LongTensor with index values of shape (*) and returns a tensor of shape (*, num_classes)
 # that have zeros everywhere except where the index of last dimension matches the corresponding value of the input tensor,
@@ -24,13 +23,17 @@ def flatten(input: Tensor) -> Tensor:
     return input.reshape(shape=(-1, 1))[:, 0]
 
 
-def one_hot(input: LongTensor, num_classes: int = -1) -> LongTensor:
+def one_hot(input: Tensor, num_classes: int = -1) -> Tensor:
     # input could be any shape
     # num_classes: total number of classes
     # num_classes = int(torch.max(input))
+    # 我们需要保证Tensor的数据类型是整形
+    assert not torch.is_floating_point(
+        input=input) and not torch.is_complex(input=input)
+
     shape = input.shape
     num_classes = num_classes if num_classes != -1 else int(torch.max(input))+1
-    result = torch.zeros(size=(*input.shape, num_classes), dtype=torch.long, device=config.conf['device']
+    result = torch.zeros(size=(*input.shape, num_classes), dtype=torch.long, device=input.device
                          ).reshape(shape=(-1, num_classes))
     # 我们遍历result的最后一个维度
     # flatten input
@@ -48,7 +51,7 @@ def one_hot(input: LongTensor, num_classes: int = -1) -> LongTensor:
     return result.reshape(shape=(*shape, num_classes))
 
 
-def embedding(input: LongTensor, weight: Tensor) -> Tensor:
+def embedding(input: Tensor, weight: Tensor) -> Tensor:
     vocab_size, embed_size = weight.shape
     # shape = input.shape
     # result.shape = shape + (embed_size)
@@ -163,7 +166,7 @@ def concat_multi_head(input: Tensor, num_head: int) -> Tensor:
 def make_source_valid_lens(source: Tensor, pad: int):
     batch_size, num_seq = source.shape
     # 为了和我们的代码不冲突 我们必须返回一个一维的向量
-    valid_lens = torch.zeros(size=[batch_size], device=config.conf['device'])
+    valid_lens = torch.zeros(size=[batch_size], device=source.device)
     # 遍历source 构造一个valid_lens
     for i in range(batch_size):
         seq = source[i]
@@ -176,7 +179,7 @@ def make_source_valid_lens(source: Tensor, pad: int):
     return valid_lens
 
 
-def make_target_valid_lens(batch_size: int, max_len: int) -> Tensor:
+def make_target_valid_lens(batch_size: int, max_len: int, device: str = 'cpu') -> Tensor:
     # target的self attention的valid lens跟encoder是不同的
     # 在encoder做训练时 我们希望位于 xt 出的token 只能attend到 xt之前的token
     # 所以这里生成的valid_lens就是一个二维的矩阵
@@ -184,7 +187,7 @@ def make_target_valid_lens(batch_size: int, max_len: int) -> Tensor:
     # 而且不同的target输入的seq_len是不同的 所以这个东西还需要动态生成
     # TIP: valid_lens的类型应该是int
     lens = torch.arange(start=1, end=max_len+1,
-                        dtype=torch.int, device=config.conf['device'])
+                        dtype=torch.int, device=torch.device(device))
     # lens是行向量
     # 然后纵向扩展到batch_size
     target_valid_lens = lens.repeat(
@@ -224,7 +227,7 @@ def add_padding(input: Tensor, padding: int | tuple[int, int]) -> Tensor:
     padding = make_tuple(padding)
     ph, pw = padding
 
-    output = torch.zeros(size=(h+ph*2, w + pw*2), device=config.conf['device'])
+    output = torch.zeros(size=(h+ph*2, w + pw*2), device=input.device)
     output[ph:ph+h, pw:pw+w] = input
     return output
 
@@ -249,7 +252,7 @@ def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[
     sh, sw = make_tuple(stride)
 
     oh, ow = (h - kh)//sh + 1, (w - kw)//sw + 1
-    output = torch.zeros(size=(oh, ow), device=config.conf['device'])
+    output = torch.zeros(size=(oh, ow), device=input.device)
 
     # 现在就是确定pad
     # 对奇数来讲 就是 / 2
