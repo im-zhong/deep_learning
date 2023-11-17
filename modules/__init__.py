@@ -1,1 +1,2 @@
-from . import lenet
+from . import nlp
+from . import vision
