@@ -12,8 +12,9 @@ My Deep Learning Codes.
 
 ## TODO
 
-1. 还差 module module_test
+1. 还差 cnn 和一些ipynb
 2. make sure all the tests are passes when we push our code to the github. but how? github action?
+3. 等cnn也弄完之后 我们需要进行下一步的重构，这就包括更加合理的架构 更加合理的命名 更加清晰的注释等
 
 ## 我们不禁要问一个问题，在什么地方应用type hint最为合适？
 
