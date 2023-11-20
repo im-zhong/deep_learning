@@ -13,3 +13,12 @@ My Deep Learning Codes.
 ## TODO
 
 1. 还差data data_module module 以及对应的测试文件
+
+## 我们不禁要问一个问题，在什么地方应用type hint最为合适？
+
+1. 显而易见的是函数题的签名应该做type hint
+2. 函数题内部需要做吗？比如我生命一个新的变量，调用函数返回一个变量？个人认为在可以轻松的由类型系统作出推断的场景，都不应该再使用type hint，比如调用函数的返回值，调用构造函数构造对象，而显示的声明接下来要使用的变量，且无法做初始化的时候，就应该做type hint
+
+## TIPS
+
+1. put all the datasets under the data/ folder

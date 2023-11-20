@@ -1,3 +1,7 @@
+# 2023/11/20
+# zhangzhong
+
+
 from mytorch.data import linear
 import torch
 
