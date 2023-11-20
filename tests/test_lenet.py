@@ -1,6 +1,6 @@
 # by using pytest, you can not use relative import, that way pytest can not find its parent
 # in other words, what you could only use is absolute import, quite anoying
-from modules.vision import lenet
+from module.vision import lenet
 # import sys
 # print(sys.path)
 
