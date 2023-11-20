@@ -63,7 +63,7 @@ class TimeMachineDataset(data.DataManager):  # 继承DataModule蛋用没有
         # 因为这个类的设计不存在通用性，所以直接给出文件路径更为简单
         # TODO:
         self.num_seq = num_seq
-        filename = './timemachine.txt'
+        filename = 'datasets/timemachine/timemachine.txt'
         self.filename = filename
 
         with open(self.filename) as f:

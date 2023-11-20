@@ -9,6 +9,8 @@ from torch import Tensor
 # from torch import LongTensor
 from typing import Callable
 from . import config
+import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 # Takes LongTensor with index values of shape (*) and returns a tensor of shape (*, num_classes)
 # that have zeros everywhere except where the index of last dimension matches the corresponding value of the input tensor,
@@ -179,7 +181,8 @@ def make_source_valid_lens(source: Tensor, pad: int):
     return valid_lens
 
 
-def make_target_valid_lens(batch_size: int, max_len: int, device: str = 'cpu') -> Tensor:
+# TODO: type hint device
+def make_target_valid_lens(batch_size: int, max_len: int, device) -> Tensor:
     # target的self attention的valid lens跟encoder是不同的
     # 在encoder做训练时 我们希望位于 xt 出的token 只能attend到 xt之前的token
     # 所以这里生成的valid_lens就是一个二维的矩阵
@@ -187,7 +190,7 @@ def make_target_valid_lens(batch_size: int, max_len: int, device: str = 'cpu') -
     # 而且不同的target输入的seq_len是不同的 所以这个东西还需要动态生成
     # TIP: valid_lens的类型应该是int
     lens = torch.arange(start=1, end=max_len+1,
-                        dtype=torch.int, device=torch.device(device))
+                        dtype=torch.int, device=device)
     # lens是行向量
     # 然后纵向扩展到batch_size
     target_valid_lens = lens.repeat(
@@ -305,16 +308,21 @@ def max_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int |
 def dropout(X: torch.Tensor, dropout: float) -> Tensor:
     assert 0 <= dropout <= 1
     if dropout == 1:
-        return torch.zeros_like(X)
+        return torch.zeros_like(X, device=X.device)
     if dropout == 0:
         return X
-    mask = (torch.rand(X.shape) > dropout).float()
+    mask = (torch.rand(X.shape, device=X.device) > dropout).float()
     return mask * X / (1.0 - dropout)
 
 
 def relu(x: Tensor) -> Tensor:
     zero = torch.zeros_like(x)
     return torch.max(x, zero)
+
+
+# TODO: after refactor, rename this
+dropout_layer = dropout
+relu_layer = relu
 
 
 def softmax(logits: Tensor):
@@ -327,3 +335,45 @@ def softmax(logits: Tensor):
     # 保持dim才能保证这里的boardcasting是沿行扩展的
     p_matrix = exp_logits / sumexp_logits
     return p_matrix
+
+
+def masked_softmax(X, valid_lens, my_mask=None):
+    # 这就是那个最重要的函数 X = torch.bmm(q, k.T)
+    """Perform softmax operation by masking elements on the last axis.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    # X: 3D tensor, valid_lens: 1D or 2D tensor
+    def _sequence_mask(X, valid_len, value=0):
+        maxlen = X.size(1)
+        mask = torch.arange((maxlen), dtype=torch.float32,
+                            device=X.device)[None, :] < valid_len[:, None]
+
+        # mask 和
+        if my_mask is not None:
+            assert torch.all(mask == my_mask)
+
+        # 那只有可能是X不一样了
+        # 我已经完全懵逼了  这完全是一样的东西啊 为什么结果会不一样？？
+        # 而且shape比较小的时候 结果hi正确的
+        # 结果shape变大之后 结果就不对了？？？
+        # plt.imshow(mask)
+        # plt.savefig('mask.png')
+        # 为什么？
+        # X = torch.ones(size=(batch_size*query_size, kv_size))
+        # 我懂了 是他的attention的计算不对
+        # 不对啊 attention是我们算的
+        X[~mask] = -1e6
+        return X
+
+    if valid_lens is None:
+        return F.softmax(X, dim=-1)
+    else:
+        shape = X.shape
+        if valid_lens.dim() == 1:
+            valid_lens = torch.repeat_interleave(valid_lens, shape[1])
+        else:
+            valid_lens = valid_lens.reshape(-1)
+        # On the last axis, replace masked elements with a very large negative
+        # value, whose exponentiation outputs 0
+        X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
+        return F.softmax(X.reshape(shape), dim=-1)

@@ -12,7 +12,7 @@ My Deep Learning Codes.
 
 ## TODO
 
-1. 还差data data_module module 以及对应的测试文件
+1. 还差 module module_test
 2. make sure all the tests are passes when we push our code to the github. but how? github action?
 
 ## 我们不禁要问一个问题，在什么地方应用type hint最为合适？

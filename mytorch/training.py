@@ -7,7 +7,6 @@
 # 原来如此 epoch epochs batch batches
 
 
-from mytorch import utils
 from mytorch import config
 from tqdm import tqdm
 # import torch.utils.tensorboard as tb
@@ -20,7 +19,7 @@ from torch import Tensor
 # 而且应该保存对应的训练信息，我们后期挑选模型应该用的到 而不是重新训练
 
 
-class Trainer(utils.ParametersToAttributes):
+class Trainer:
     """The base class for training models with data."""
 
     def __init__(self, *, model, loss_fn, optimizer, num_epochs, train_dataloader, val_dataloader, num_gpus=0, gradient_clip_val=0):
