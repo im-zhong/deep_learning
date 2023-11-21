@@ -225,13 +225,16 @@ class MyBiGRU(nn.Module):
         assert forward_outputs.shape == (len_seq, batch_size, self.hidden_size)
         assert backward_outputs.shape == (
             len_seq, batch_size, self.hidden_size)
-        assert forward_state.shape == (batch_size, self.hidden_size)
-        assert backward_state.shape == (batch_size, self.hidden_size)
+        if forward_state is not None:
+            assert forward_state.shape == (batch_size, self.hidden_size)
+        if backward_state is not None:
+            assert backward_state.shape == (batch_size, self.hidden_size)
 
         outputs = torch.cat(
             (forward_outputs, torch.flip(backward_outputs, [0])), dim=-1)
         # 这里不能用stack，需要使用cat才能和DeepGRU协同使用 否则就需要重新实现了
         # return outputs, torch.stack((forward_state, backward_state))
+        assert forward_state is not None and backward_state is not None
         state = torch.cat((forward_state, backward_state), -1)
         assert outputs.shape == (len_seq, batch_size, int(2*self.hidden_size))
         assert state.shape == (batch_size, int(2*self.hidden_size))
@@ -265,7 +268,7 @@ class MyDeepGRU(nn.Module):
             assert num_layers == self.num_layers
             assert hidden_size == self.hidden_size
         else:
-            initial_states = [None] * self.num_layers
+            initial_states = [None] * self.num_layers  # type: ignore
 
         states: list[Tensor] = []
         outputs = input
@@ -273,6 +276,7 @@ class MyDeepGRU(nn.Module):
             # 每一层我们都可以拿到一个state
             # 最终这些state也要stack起来
             # 反而是outputs，我们只要最后一层的
+            assert initial_states is not None
             outputs, state = self.net[l](outputs, initial_states[l])
             states.append(state)
 

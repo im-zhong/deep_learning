@@ -119,12 +119,12 @@ class Decoder(nn.Module):
             outputs.append(output)
         assert len(outputs) == num_seq
 
-        outputs = torch.stack(outputs, dim=1)
-        assert outputs.shape == (batch_size, num_seq, self.vocab_size)
+        result = torch.stack(outputs, dim=1)
+        assert result.shape == (batch_size, num_seq, self.vocab_size)
         # outputs要和label做cross entropy
         # 我们需要确认label的shape = (batch_size, num_seq)
         # 完全正确
-        return outputs, decoder_state
+        return result, decoder_state
 
 # TODO: loss还需要走mask
 
@@ -171,11 +171,11 @@ class Seq2Seq(nn.Module):
         # 1. preprocess
         source_vocab = trans.source_vocab
         target_vocab = trans.target_vocab
-        source = source_vocab.tokenize(prompt)
+        tokenized_source = source_vocab.tokenize(prompt)
         # get the device of a PyTorch module using the .device property of the module's parameters.
         device = next(self.parameters()).device
         # 这里是需要指定设备的，但是没有任何人告诉我我需要用什么设备
-        source = torch.tensor(source, device=device)
+        source = torch.tensor(tokenized_source, device=device)
 
         # 2. encoder
         encoder_output, encoder_state, *_ = self.encoder(source)
@@ -198,7 +198,7 @@ class Seq2Seq(nn.Module):
             )
             assert decoder_output.shape == (1, 1, len(target_vocab))
             output: Tensor = decoder_output.squeeze()
-            index = torch.argmax(output)
+            index = int(torch.argmax(output))
             result.append(index)
 
         return target_vocab.to_string(result)

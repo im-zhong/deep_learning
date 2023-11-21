@@ -134,8 +134,9 @@ class TransformerDecoderBlock(nn.Module):
         # target_valid_lens.shape = (batch_size, seq_len)
         # 而且不同的target输入的seq_len是不同的 所以这个东西还需要动态生成
         # TIP: valid_lens的类型应该是int
+        device = next(self.parameters()).device
         lens = torch.arange(start=0, end=max_len,
-                            dtype=torch.int, device=config.conf['device']).reshape(1, -1)
+                            dtype=torch.int, device=device).reshape(1, -1)
         # lens是行向量
         # 然后纵向扩展到batch_size
         target_valid_lens = lens.repeat(
@@ -211,7 +212,7 @@ class TransformerDecoder(nn.Module):
 
     def clear_history(self):
         for decoder in self.decoders:
-            decoder.clear_history()
+            decoder.clear_history()  # type: ignore
 
     def forward(self, target: Tensor, encoder_output: Tensor, source_valid_lens: Tensor):
         # Encoder和Decoder的返回值和调用参数必须匹配

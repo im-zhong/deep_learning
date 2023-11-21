@@ -343,7 +343,7 @@ def masked_softmax(X, valid_lens, my_mask=None):
 
     Defined in :numref:`sec_attention-scoring-functions`"""
     # X: 3D tensor, valid_lens: 1D or 2D tensor
-    def _sequence_mask(X, valid_len, value=0):
+    def _sequence_mask(X, valid_len, value: float = 0):
         maxlen = X.size(1)
         mask = torch.arange((maxlen), dtype=torch.float32,
                             device=X.device)[None, :] < valid_len[:, None]

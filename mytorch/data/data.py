@@ -5,6 +5,7 @@
 # 2023/9/9
 # zhangzhong
 
+from abc import ABC, abstractclassmethod, abstractmethod
 import torch
 from torch import Tensor
 from typing import Any
@@ -77,17 +78,17 @@ class Dataset:
 # 其实无法提取一个具体的接口 也没有必要 所以可以取消掉这个设计
 
 
-class DataManager:
-    def __init__(self):
-        pass
-
+class DataManager(ABC):
     # 我们可以拿到不同的dataset
     # TODO: Fis this type error
+    # https://docs.python.org/3/library/abc.html#abc.abstractmethod
+    @abstractmethod
     def get_train_dataset(self) -> Dataset:
-        return Any
+        pass
 
+    @abstractmethod
     def get_val_dataset(self) -> Dataset:
-        return Any
+        pass
 
 
 class DataLoaderV2:

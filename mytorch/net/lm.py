@@ -181,7 +181,7 @@ class LanguageModel(nn.Module):
         # outputs = outputs.transpose(0, 1)
         # assert outputs.shape == (batch_size, num_seq, vocab_size)
         # return outputs
-        outputs = []
+        outputs: list[Tensor] = []
         for state in states:
             # assert output.shape == (batch_size, hidden_size)
             output = self.output_layer(state)
@@ -189,9 +189,9 @@ class LanguageModel(nn.Module):
             outputs.append(output)
         assert len(outputs) == num_seq
 
-        outputs = torch.stack(outputs, dim=1)
-        assert outputs.shape == (batch_size, num_seq, vocab_size)
-        return outputs
+        result = torch.stack(outputs, dim=1)
+        assert result.shape == (batch_size, num_seq, vocab_size)
+        return result
 
     def predict(self, prompt: str, max_len: int) -> str:
         with torch.no_grad():

@@ -226,7 +226,7 @@ class VocabularyV2:
     # output: list[list[int]]
     def tokenize(self, prompt: str) -> list[list[int]]:
         text = preprocess_english([prompt])
-        text = [line.split(' ') for line in text]
+        text = [line.split(' ') for line in text]  # type: ignore
         return [[self.to_index(token) for token in line] + [self.eos()]
                 for line in text]
 
@@ -266,7 +266,7 @@ def dynamic_padding(seqs: list[list[int]],  max_length: int, vocab: VocabularyV2
     # 我们不应该修改seqs，因为seqs会包含对原始数据集的引用
     # 我们应该创建新的aligned_seqs
     ctx_max_length: int = max_length
-    ctx_vocab: Vocabulary = vocab
+    ctx_vocab: VocabularyV2 = vocab
     aligned_seqs: list[list[int]] = copy.deepcopy(seqs)
     # 第一步 先简单的实现，不考虑max_length
     max_length = min(ctx_max_length, max([len(seq) for seq in seqs]))
@@ -317,9 +317,11 @@ class DynamicPadding:
         # return dynamic_padding(seqs, self.max_len, self.vocab)
         source, target = seqs
 
-        source = dynamic_padding(source, self.max_len, self.source_vocab)
-        target = dynamic_padding(target, self.max_len, self.target_vocab)
-        return source, target[:, :-1], target[:, 1:]
+        padded_source = dynamic_padding(
+            source, self.max_len, self.source_vocab)
+        padded_target = dynamic_padding(
+            target, self.max_len, self.target_vocab)
+        return padded_source, padded_target[:, :-1], padded_target[:, 1:]
 
 
 class TranslationDataset(data.Dataset):
