@@ -4,7 +4,7 @@
 import torch
 from torch import nn, Tensor
 from mytorch.net.encoding import PositionalEncoding
-from mytorch import config
+from mytorch import config, utils
 import matplotlib.pyplot as plt
 
 
@@ -19,7 +19,8 @@ def test_PositionalEncoding():
     positional_encoding = pe.position.cpu()[0]
     plt.imshow(positional_encoding[:64, :])
     plt.colorbar()
-    plt.savefig('positional_encoding.png')
+    # plt.savefig('positional_encoding.png')
+    utils.mysavefig('positional_encoding.png')
 
     max_len = 1024
     num_hiddens = hidden_size
@@ -32,4 +33,5 @@ def test_PositionalEncoding():
     p = P[0]
     plt.imshow(p[:64, :])
     plt.colorbar()
-    plt.savefig('gt_pe.png')
+    # plt.savefig('gt_pe.png')
+    utils.mysavefig('gt_pe.png')

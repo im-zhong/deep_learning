@@ -6,6 +6,7 @@ from mytorch.net.attention import DotProductAttention, MaskedDotProductAttention
 import matplotlib.pyplot as plt
 from mytorch import config, func
 import math
+from mytorch import utils
 
 
 def test_DotProductAttention():
@@ -23,7 +24,8 @@ def test_DotProductAttention():
     # plt.legend()
     # plt.tight_layout()
     plt.colorbar()
-    plt.savefig('attention.png')
+    # plt.savefig('attention.png')
+    utils.mysavefig('attention.png')
 
 
 def test_MaskedDotProductAttention():
@@ -44,7 +46,8 @@ def test_MaskedDotProductAttention():
     # plt.legend()
     # plt.tight_layout()
     plt.colorbar()
-    plt.savefig('attention.png')
+    # plt.savefig('attention.png')
+    utils.mysavefig('attention.png')
 
 
 # TODO: 我们不能在每个tensor的创建的时候都指定device 我们最终是需要把config文件去掉的
@@ -73,7 +76,8 @@ def test_MaskedDotProductAttention_2():
     qk = qk.cpu()
     plt.imshow(qk[0])
     plt.colorbar()
-    plt.savefig('none.png')
+    # plt.savefig('none.png')
+    utils.mysavefig('none.png')
 
     # case 2: len(valid_len.shape) = 1
     valid_lens2 = torch.arange(
@@ -84,7 +88,8 @@ def test_MaskedDotProductAttention_2():
     qk = qk.cpu()
     plt.imshow(qk[3])
     plt.colorbar()
-    plt.savefig('source_attention.png')
+    # plt.savefig('source_attention.png')
+    utils.mysavefig('source_attention.png')
 
     # 感觉应该是对的 但是还是要和ground truth做对比
     X = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(hidden_size)
@@ -92,7 +97,8 @@ def test_MaskedDotProductAttention_2():
     qk = qk.cpu()
     plt.imshow(qk[3])
     plt.colorbar()
-    plt.savefig('gt_source_attention.png')
+    # plt.savefig('gt_source_attention.png')
+    utils.mysavefig('gt_source_attention.png')
 
     # case 3. len(valid_len.shape) == 2
     valid_lens3 = torch.arange(
@@ -103,7 +109,8 @@ def test_MaskedDotProductAttention_2():
     qk = qk.cpu()
     plt.imshow(qk[3])
     plt.colorbar()
-    plt.savefig('target_attention.png')
+    # plt.savefig('target_attention.png')
+    utils.mysavefig('target_attention.png')
 
     my_mask = attention.mask.reshape(-1, kv_size)
 
@@ -117,4 +124,5 @@ def test_MaskedDotProductAttention_2():
     qk = qk.cpu()
     plt.imshow(qk[3])
     plt.colorbar()
-    plt.savefig('gt_target_attention.png')
+    # plt.savefig('gt_target_attention.png')
+    utils.mysavefig('gt_target_attention.png')
