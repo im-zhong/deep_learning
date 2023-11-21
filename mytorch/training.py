@@ -13,6 +13,7 @@ from tqdm import tqdm
 from torch.utils.tensorboard.writer import SummaryWriter
 import torch
 from torch import Tensor
+import os.path
 
 
 # TODO: 我有一个想法，对于我们训练过程中的每一个中间过程都应该保存下来
@@ -36,6 +37,7 @@ class Trainer:
         self.num_gpus = num_gpus
         self.gradient_clip_val = gradient_clip_val
         self.writer = SummaryWriter()
+        self.model_file_prefix = 'snapshots'
 
         if torch.cuda.is_available():
             self.device = torch.device(config.conf['device'])
@@ -84,9 +86,12 @@ class Trainer:
         return int((predict_labels == labels).int().sum()), batch_size
 
     def save_model(self, filename: str):
+        os.makedirs(self.model_file_prefix, exist_ok=True)
+        filename = os.path.join(self.model_file_prefix, filename)
         torch.save(self.model, filename)
 
     def load_model(self, filename: str):
+        filename = os.path.join(self.model_file_prefix, filename)
         self.model = torch.load(filename)
 
     # def fit_epoch():

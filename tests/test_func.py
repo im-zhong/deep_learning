@@ -143,8 +143,9 @@ def test_make_source_valid_lens():
 
 def test_target_valid_lens():
     batch_size, max_len = 2, 4
+    # TODO: device should be default
     target_valid_lens = func.make_target_valid_lens(
-        batch_size=batch_size, max_len=max_len)
+        batch_size=batch_size, max_len=max_len, device='cpu')
 
     print(target_valid_lens)
 

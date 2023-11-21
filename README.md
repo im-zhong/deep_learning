@@ -24,3 +24,5 @@ My Deep Learning Codes.
 ## TIPS
 
 1. put all the datasets under the data/ folder
+2. 分层训练，这样就可以训练大模型了
+3. 为了在jupyter notebook里面使用我们编写的package，需要在根目录下提供一个.env文件并在内部指定PYTHONPATH=your-root-dir [https://github.com/microsoft/vscode-jupyter/issues/9436]
