@@ -2,21 +2,19 @@
 # zhangzhong
 
 import torch
-from torch import nn, Tensor
 from mytorch.net.encoding import PositionalEncoding
-from mytorch import config, utils
+from mytorch import utils
 import matplotlib.pyplot as plt
 
 
 def test_PositionalEncoding():
     batch_size, seq_size, hidden_size = 4, 16, 32
     pe = PositionalEncoding(hidden_size=hidden_size)
-    x = torch.rand(size=(batch_size, seq_size, hidden_size),
-                   device=config.conf['device'])
+    x = torch.rand(size=(batch_size, seq_size, hidden_size))
     y = pe(x)
 
     # 咱们画一张热力图
-    positional_encoding = pe.position.cpu()[0]
+    positional_encoding = pe.position[0]
     plt.imshow(positional_encoding[:64, :])
     plt.colorbar()
     # plt.savefig('positional_encoding.png')

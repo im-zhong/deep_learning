@@ -12,7 +12,7 @@ from tqdm import tqdm
 # import torch.utils.tensorboard as tb
 from torch.utils.tensorboard.writer import SummaryWriter
 import torch
-from torch import Tensor
+from torch import device, nn, Tensor
 import os.path
 
 
@@ -23,7 +23,7 @@ import os.path
 class Trainer:
     """The base class for training models with data."""
 
-    def __init__(self, *, model, loss_fn, optimizer, num_epochs, train_dataloader, val_dataloader, num_gpus=0, gradient_clip_val=0):
+    def __init__(self, *, model, loss_fn, optimizer, num_epochs, train_dataloader, val_dataloader, num_gpus=0, gradient_clip_val=0, is_test: bool = True, device: device = torch.device('cpu')):
         assert num_gpus == 0, 'No GPU support yet'
         # 用这个函数 类型检查系统会complain 所以还是不要用了
         # 你也不知道你引进来了什么
@@ -38,11 +38,18 @@ class Trainer:
         self.gradient_clip_val = gradient_clip_val
         self.writer = SummaryWriter()
         self.model_file_prefix = 'snapshots'
+        self.is_test = is_test
+        self.max_batch: int = 10
 
-        if torch.cuda.is_available():
-            self.device = torch.device(config.conf['device'])
-        else:
-            self.device = torch.device('cpu')
+        # if torch.cuda.is_available():
+        #     self.device = torch.device(config.conf['device'])
+        # else:
+        #     self.device = torch.device('cpu')
+        self.device = device
+
+        # 我的理解是 trainer也不能够使用cuda
+        # 我们应该遵循一条原则，就是默认的情况下，大家都在cpu上
+        # 但是我们可以显示的指定设备，但是这些显示的指定的代码应该只有一处！
 
     # def prepare_data(self, data):
     #     self.train_dataloader = data.train_dataloader()
@@ -112,7 +119,14 @@ class Trainer:
             train_losses = torch.tensor(0.0, device=self.device)
             # dataloader的每次遍历都应该进行一次shuffle
             # for X, y in tqdm(self.train_dataloader):
+            current_batch = 0
             for batch in tqdm(self.train_dataloader):
+                # if we in test mode, we only do several batch
+                if self.is_test:
+                    current_batch += 1
+                    if current_batch > self.max_batch:
+                        break
+
                 X = list(batch[:-1])
                 y = batch[-1]
                 # X = X.to(self.device)
@@ -127,6 +141,10 @@ class Trainer:
                 loss = self.loss_fn(y_hat, y)
                 train_losses += loss
                 loss.backward()
+
+                # TODO:DONE
+                # 在这里我们才能够给到optimizer我们的参数
+                # self.optimizer.set_parameters(self.model.parameters())
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
@@ -135,7 +153,14 @@ class Trainer:
             val_losses = torch.tensor(0.0, device=self.device)
             accuracyes = 0
             num_examples = 0
+            current_batch = 0
             for batch in tqdm(self.val_dataloader):
+                # if we in test mode, we only do several batch
+                if self.is_test:
+                    current_batch += 1
+                    if current_batch > self.max_batch:
+                        break
+
                 X = list(batch[:-1])
                 y = batch[-1]
                 # X = X.to(self.device)

@@ -13,3 +13,4 @@ def test_FashionMNIST():
     for imgs, labels in train_dataloader:
         print(imgs.shape)
         print(labels.shape)
+        break

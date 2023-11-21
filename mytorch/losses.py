@@ -4,6 +4,8 @@
 import torch
 import numpy as np
 from torch import Tensor
+from typing import Iterator
+from torch import nn
 
 
 class Loss:
@@ -24,16 +26,25 @@ class MSELoss(Loss):
 # todo: weight_decay 需要 module.parameters().weights
 
 
-class MSELossWithWeightDecay(Loss):
+# class MSELossWithWeightDecay(Loss):
 
-    def __init__(self, weight, weight_decay=0.0):
-        super().__init__()
-        self.weight = weight
-        self.weight_decay = weight_decay
+#     def __init__(self, parameters: Iterator[Tensor], weight_decay=0.0):
+#         super().__init__()
+#         self.parameters = list(parameters)
+#         self.weight: Tensor | None = None
+#         self.weight_decay = weight_decay
 
-    def __call__(self, y_hat, y):
-        # weight panalty = weight_decay * (w1**2 + w2**2 + ... + wn**2) / 2
-        return torch.mean((y_hat - y)**2) / 2 + self.weight_decay * (self.weight**2).sum() / 2
+#     # nn.Parameters() register the attr to the model, so we can do a lot of other useful things
+#     # https://stackoverflow.com/questions/64507404/defining-named-parameters-for-a-customized-nn-module-in-pytorch
+#     # https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.named_parameters
+
+#     def __call__(self, y_hat, y):
+#         # weight panalty = weight_decay * (w1**2 + w2**2 + ... + wn**2) / 2
+#         if self.weight is None:
+#             # TODO: 或者我们可以指定parameters的名字吗 那样或许可以拿到weight
+#             # 这里想要拿到weight就需要使用named_parameters 还是算了
+#             self.weight = self.parameters[0]
+#         return torch.mean((y_hat - y)**2) / 2 + self.weight_decay * (self.weight**2).sum() / 2
 
 # 我们应该写两个类
 # 一个是CrossEntropyLoss的简单实现
@@ -148,3 +159,11 @@ class CrossEntropyLoss(Loss):
             return loss.mean()
         else:
             return loss
+
+
+# class LossFactory:
+#     def __init__(self, name: str):
+#         self.name = name
+
+#     def new(self, model: nn.Module, optimizer):
+#         if

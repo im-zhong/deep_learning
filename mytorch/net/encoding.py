@@ -2,29 +2,29 @@
 # zhangzhong
 
 import torch
-from torch import nn, Tensor
-from mytorch import config
+from torch import nn, Tensor, device
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, hidden_size: int, max_len: int = 1024, dropout: float = 0.2):
+    def __init__(self, hidden_size: int, max_len: int = 1024, dropout: float = 0.2, device: device = torch.device('cpu')):
         super().__init__()
         self.max_len: int = max_len
         # 感觉好多层都有dropout哦 为了提高generalization
         self.dropout = nn.Dropout(p=dropout)
         self.hidden_size = hidden_size
         self.position = torch.zeros(
-            size=(max_len, hidden_size), dtype=torch.float32, device=config.conf['device'])
+            size=(max_len, hidden_size), dtype=torch.float32, device=device)
+        self.device = device
 
         # 列向量
         # i
         rows = torch.arange(start=0, end=max_len, dtype=torch.float32,
-                            device=config.conf['device']).reshape(shape=(-1, 1))
+                            device=device).reshape(shape=(-1, 1))
 
         # 行向量
         # 2j/d
-        cols = torch.arange(start=0, end=hidden_size,
-                            step=2, dtype=torch.float32, device=config.conf['device']) / hidden_size
+        cols = torch.arange(start=0, end=hidden_size, step=2,
+                            dtype=torch.float32, device=device) / hidden_size
         # 现在行向量的长度是hidden_size/2
         # 现在这个就是频率
         # cols = 1.0 / (10000 ** cols)

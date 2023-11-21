@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from mytorch.data import seq
 from mytorch.net.rnn import RNNScratch
 from typing import Any
-from mytorch import config
 
 
 class LanguageModelScratch(nn.Module):
@@ -123,7 +122,9 @@ class LanguageModelScratch(nn.Module):
             x_one_host = F.one_hot(x, vocab_size).float()
             assert x_one_host.shape == (1, vocab_size)
 
-            x_one_host = x_one_host.to(torch.device(config.conf['device']))
+            # get current device
+            device = next(self.parameters()).device
+            x_one_host = x_one_host.to(device)
             state = self.rnn(x_one_host, state)
             assert state.shape == (1, self.rnn.num_hidden)
             states.append(state)
@@ -199,8 +200,8 @@ class LanguageModel(nn.Module):
     def predict_impl(self, prompt: str, max_len: int) -> str:
         len_seq, vocab_size = len(prompt), len(self.vocab)
         # 1. prompt -> rnn.input -> final_state
-        embedding = self.vocab.build_input(
-            prompt=prompt).to(torch.device(config.conf['device']))
+        device = next(self.parameters()).device
+        embedding = self.vocab.build_input(prompt=prompt).to(device)
         assert embedding.shape == (len_seq, 1, vocab_size)
         # TODO: 或许应该创建一个全局的config对象，很多配置是全局的 应该放到里面
         # BUG:FIX. pytorch.rnn的final_state的shape = (num_layers, batch_size, hidden_size)
@@ -232,8 +233,7 @@ class LanguageModel(nn.Module):
 
             # 把token转换成rnn的输入
             # TODO:DONE. 算了 好多重复的 还是写到Vocabulary里面吧
-            embedding = self.vocab.build_input(
-                prompt=token).to(torch.device(config.conf['device']))
+            embedding = self.vocab.build_input(prompt=token).to(device)
             outputs, state = self.rnn(embedding, state)
 
         return result

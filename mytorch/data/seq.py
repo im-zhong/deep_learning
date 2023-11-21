@@ -360,7 +360,7 @@ class TranslationDataset(data.Dataset):
 
 
 class TranslationDataManager(data.DataManager):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # under the pytest, this file should be found at the root dir
         # so we could download it and put it in the data/ folder

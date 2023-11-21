@@ -37,7 +37,15 @@ class MyConv2d(nn.Module):
         # for input, kernel in zip(inputs, kernels):
         #     corr2dv2(input=add_padding(input, padding=self.padding), kernel=kernel, stride=self.stride)
 
-        return sum([func.corr2d(input=input, padding=self.padding, kernel=kernel, stride=self.stride) for input, kernel in zip(inputs, kernels)])
+        results: list[Tensor] = [func.corr2d(
+            input=input, padding=self.padding, kernel=kernel, stride=self.stride) for input, kernel in zip(inputs, kernels)]
+        output = torch.stack(results)
+        # now output's shape is 3-d
+        co, ho, wo = output.shape
+        assert co == ci
+        # but what we need is 2-d, we need accumulate all the channel, we need try
+        return torch.sum(output, dim=0)
+        # return sum([func.corr2d(input=input, padding=self.padding, kernel=kernel, stride=self.stride) for input, kernel in zip(inputs, kernels)])
         # return torch.tensor([])
 
     def forward(self, input: Tensor) -> Tensor:

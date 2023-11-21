@@ -70,7 +70,7 @@ class AttentionDecoder(nn.Module):
     def clear_history(self):
         pass
 
-    def forward(self, target: Tensor, encoder_output: Tensor, encoder_state: Tensor, valid_lens: Tensor = None) -> tuple[Tensor, Tensor]:
+    def forward(self, target: Tensor, encoder_output: Tensor, encoder_state: Tensor, valid_lens: Tensor | None = None) -> tuple[Tensor, Tensor]:
         batch_size, num_seqtgt = target.shape
         srcseq_size, batch_size, hidden_size = encoder_output.shape
         num_layers, batch_size, hidden_size = encoder_state.shape

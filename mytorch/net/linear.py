@@ -3,7 +3,7 @@
 # linear layer
 
 import torch
-from torch import nn
+from torch import device, nn, Tensor
 import mytorch.config
 from torch import Tensor
 from mytorch import func
@@ -11,34 +11,47 @@ from mytorch import func
 
 class LinearRegressionScratch(nn.Module):
     # 这是我们的第一个模型
-    def __init__(self, in_features):
+    def __init__(self, in_features: int) -> None:
         super().__init__()
         # 初始化参数
         # 默认使用N(0, 0.0.^2)
         # 但是模型的大小要怎么确定呢??
         # TODO: 你这个不对，初始化的参数的正态分布的方差应该是0.01
-        default_device = mytorch.config.conf['device']
-        self.w = torch.randn((in_features, 1), requires_grad=True,
-                             device=torch.device(default_device))
-        self.b = torch.randn((1,), requires_grad=True,
-                             device=torch.device(default_device))
+        # should be lazy also
+        # 原来如此，Parameter是支持lazy的 这样我们的优化器也可以使用了 完美！
+        self.w: nn.Parameter | None = None
+        self.b: nn.Parameter | None = None
+        self.in_features = in_features
+
+        # default_device = mytorch.config.conf['device']
+        # self.w = torch.randn((in_features, 1), requires_grad=True,
+        #                      device=torch.device(default_device))
+        # self.b = torch.randn((1,), requires_grad=True,
+        #                      device=torch.device(default_device))
         # AttributeError: Can't pickle local object 'LinearRegressionScratch.__init__.<locals>.<lambda>'
         # self.net = lambda X: X @ self.w + self.b
 
-    def parameters(self):
-        """
-        Returns an iterator over module parameters.
+    # def parameters(self):
+    #     """
+    #     Returns an iterator over module parameters.
 
-        code example:
-            for name, param in self.named_parameters(recurse=recurse):
-                yield param
-        """
-        # 返回模型的参数
-        # return self.w, self.b
-        yield self.w
-        yield self.b
+    #     code example:
+    #         for name, param in self.named_parameters(recurse=recurse):
+    #             yield param
+    #     """
+    #     # 返回模型的参数
+    #     # return self.w, self.b
+    #     assert self.w is not None
+    #     assert self.b is not None
+    #     yield self.w
+    #     yield self.b
 
-    def forward(self, X):
+    def forward(self, X: Tensor) -> Tensor:
+        if self.w is None:
+            self.w = nn.Parameter(torch.randn(size=(self.in_features, 1), requires_grad=True,
+                                              device=X.device))
+            self.b = nn.Parameter(torch.randn(size=(1,), requires_grad=True,
+                                              device=X.device))
         return X @ self.w + self.b
 
 # net = torch.nn.Linear(in_feature, out_feature)
@@ -62,8 +75,11 @@ class LinearRegression(nn.Module):
 
 class LinearClassifierScratch(nn.Module):
 
-    def __init__(self, in_features, out_features, sigma=0.01):
+    def __init__(self, in_features: int, out_features: int, sigma: float = 0.01):
         super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.sigma = sigma
 
         # 定义参数和网络结构
         # W: (in_features, out_features)
@@ -74,25 +90,34 @@ class LinearClassifierScratch(nn.Module):
         # 其实你可以发现我们的网络结构和linear非常像
         # 其实就是一个线性层，只不过我们的out_features是10 而不是1
         # 原来是我用错了函数 应该是 torch.normal
-        default_device = mytorch.config.conf['device']
-        self.w = torch.randn((in_features, out_features),
-                             requires_grad=True, device=torch.device(default_device))
-        self.b = torch.randn(
-            (1, out_features), requires_grad=True, device=torch.device(default_device))
+        # default_device = mytorch.config.conf['device']
+        # self.w = torch.randn((in_features, out_features),
+        #                      requires_grad=True, device=torch.device(default_device))
+        # self.b = torch.randn(
+        #     (1, out_features), requires_grad=True, device=torch.device(default_device))
+        self.w: nn.Parameter | None = None
+        self.b: nn.Parameter | None = None
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         # step1, 将x展平
         # x.shape = (batch_size, channel, height, width)
         # TODO: 我们会发现将数据展平这个操作可以发生在Dataset的预处理阶段
         # 也可以发生在网络的计算阶段
         # 那么到底放在哪里？？这是个问题
         x = torch.flatten(x, start_dim=1)
+
+        if self.w is None:
+            self.w = nn.Parameter(data=torch.randn(size=(self.in_features, self.out_features),
+                                                   requires_grad=True, device=x.device))
+            self.b = nn.Parameter(data=torch.randn(size=(1, self.out_features),
+                                                   requires_grad=True, device=x.device))
+
         y_hat = x @ self.w + self.b
         return y_hat
 
-    def parameters(self):
-        yield self.w
-        yield self.b
+    # def parameters(self):
+    #     yield self.w
+    #     yield self.b
 
 
 class LinearClassifier(nn.Module):
@@ -113,7 +138,7 @@ class LinearClassifier(nn.Module):
 
 
 class MLPScratch(nn.Module):
-    def __init__(self, in_features, out_features, num_hidden_1, num_hidden_2, dropout_1=0.0, dropout_2=0.0) -> None:
+    def __init__(self, in_features: int, out_features: int, num_hidden_1: int, num_hidden_2: int, dropout_1: float = 0.0, dropout_2: float = 0.0, device: device = torch.device('cpu')) -> None:
         super().__init__()
         # we should not use this dynamic add attr to a class
         # it is bad for type checker
@@ -124,20 +149,21 @@ class MLPScratch(nn.Module):
         self.num_hidden_2 = num_hidden_2
         self.dropout_1 = dropout_1
         self.dropout_2 = dropout_2
+        self.device = device
 
-        default_device: str = mytorch.config.conf['device']
+        # default_device: str = mytorch.config.conf['device']
         self.W1 = torch.normal(
-            0, 0.01, (in_features, num_hidden_1), requires_grad=True, device=torch.device(default_device))
+            0, 0.01, (in_features, num_hidden_1), requires_grad=True, device=self.device)
         self.b1 = torch.normal(0, 0.01, (1, num_hidden_1),
-                               requires_grad=True, device=torch.device(default_device))
+                               requires_grad=True, device=self.device)
         self.W2 = torch.normal(
-            0, 0.01, (num_hidden_1, num_hidden_2), requires_grad=True, device=torch.device(default_device))
+            0, 0.01, (num_hidden_1, num_hidden_2), requires_grad=True, device=self.device)
         self.b2 = torch.normal(0, 0.01, (1, num_hidden_2),
-                               requires_grad=True, device=torch.device(default_device))
+                               requires_grad=True, device=self.device)
         self.W3 = torch.normal(
-            0, 0.01, (num_hidden_2, out_features), requires_grad=True, device=torch.device(default_device))
+            0, 0.01, (num_hidden_2, out_features), requires_grad=True, device=self.device)
         self.b3 = torch.normal(0, 0.01, (1, out_features),
-                               requires_grad=True, device=torch.device(default_device))
+                               requires_grad=True, device=self.device)
 
     def forward(self, X: Tensor) -> Tensor:
         # step 1. flatten

@@ -56,7 +56,7 @@ class MaskedDotProductAttention(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, valid_lens: Tensor = None) -> tuple[Tensor, Tensor]:
+    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, valid_lens: Tensor | None = None) -> tuple[Tensor, Tensor]:
         batch_size1, query_size, hidden_size1 = queries.shape
         batch_size2, key_size, hidden_size2 = keys.shape
         batch_size3, value_size, hidden_size3 = values.shape
@@ -66,6 +66,7 @@ class MaskedDotProductAttention(nn.Module):
         # 目前的实现里面，query_size是1
         # 解开封印
         # assert query_size == 1
+        device = queries.device
 
         # 接下来就是计算attention weight矩阵
         # shape = (b, query_size, key_size)
@@ -92,7 +93,7 @@ class MaskedDotProductAttention(nn.Module):
                 valid_lens=valid_lens, batch_size=batch_size1, query_size=query_size, key_size=key_size)
 
             # 行向量
-            mask = torch.arange(end=key_size, device=config.conf['device']).reshape(
+            mask = torch.arange(end=key_size, device=device).reshape(
                 1, -1).repeat(query_size, 1)
             assert mask.shape == (query_size, key_size)
 

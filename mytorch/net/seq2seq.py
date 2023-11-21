@@ -5,9 +5,8 @@ import torch
 from torch import nn, Tensor
 from mytorch import func
 import torch.nn.functional as F
-from mytorch import config
 from .rnn import MyDeepGRU
-from mytorch import losses
+from mytorch import losses, utils, config
 from mytorch.data import seq
 
 
@@ -19,8 +18,8 @@ class MyEmbedding(nn.Module):
         self.transpose = transpose
         self.vocab_size = vocab_size
         self.embed_size = embed_size
-        self.weight = nn.Parameter(torch.normal(
-            mean=0, std=0.01, size=(vocab_size, embed_size), device=config.conf['device']))
+        # lazy initialization
+        self.weight: nn.Parameter | None = None
 
     # dataloader的输出会直接送到embedding这里
     def forward(self, input: Tensor) -> Tensor:
@@ -28,14 +27,18 @@ class MyEmbedding(nn.Module):
         batch_size, num_seq = input.shape
         # embedding.shape = (num_seq, batch_size, embed_size)
 
-        # BUG: 忘了给input做转置
+        # lazy initialization
+        if self.weight is None:
+            self.weight = nn.Parameter(torch.normal(
+                mean=0, std=0.01, size=(self.vocab_size, self.embed_size), device=input.device))
+
+        # BUG:FIX 忘了给input做转置
         if self.transpose:
             e = func.embedding(input.T, self.weight)
             assert e.shape == (num_seq, batch_size, self.embed_size)
         else:
             e = func.embedding(input, self.weight)
             assert e.shape == (batch_size, num_seq, self.embed_size)
-
         return e
 
 
@@ -142,6 +145,7 @@ class Seq2Seq(nn.Module):
     # 我们要搞清楚Dataset和Dataloader的职责
     # dataset就要规定数据的格式，dataloader只不过是每次取一个batch出来而已
     # 设计实现新模型的时候，我们要努力做到只需要实现一个Dataset和Model 剩下的应该全部复用！
+
     def forward(self, source: Tensor, target: Tensor) -> Tensor:
         # source.shape: batch_size, num_src_seq
         # target.shape: batch_size, num_tag_seq
@@ -162,13 +166,17 @@ class Seq2Seq(nn.Module):
             self.decoder.clear_history()
             return self.predict_impl(trans=trans, prompt=prompt)
 
+    # prompt生成的数据需要在那个设备上
     def predict_impl(self, trans: seq.TranslationDataManager, prompt: str) -> str:
         # 1. preprocess
         source_vocab = trans.source_vocab
         target_vocab = trans.target_vocab
         source = source_vocab.tokenize(prompt)
-        source = torch.tensor(
-            source, device=torch.device(config.conf['device']))
+        # get the device of a PyTorch module using the .device property of the module's parameters.
+        device = next(self.parameters()).device
+        # 这里是需要指定设备的，但是没有任何人告诉我我需要用什么设备
+        source = torch.tensor(source, device=device)
+
         # 2. encoder
         encoder_output, encoder_state, *_ = self.encoder(source)
         # context = encoder_output[-1]
@@ -183,7 +191,7 @@ class Seq2Seq(nn.Module):
         max_len = 32
         while len(result) < max_len and index != target_vocab.eos():
             # 在最开始的时候，用encoder_state作为decoder的初始state
-            target = torch.tensor([[index]], device=config.conf['device'])
+            target = torch.tensor([[index]], device=device)
             assert target.shape == (1, 1)
             decoder_output, decoder_state = self.decoder(
                 target, encoder_output, decoder_state

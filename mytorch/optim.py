@@ -15,7 +15,7 @@
 #             param.grad = None
 
 import torch
-from torch import Tensor
+from torch import nn, Tensor
 from typing import Iterator
 import math
 
@@ -81,6 +81,10 @@ class SGD():
     #             for p in self.params:
     #                 p.grad *= (self.gradient_clip / m)
 
+    # 不对呀 这样只有我们自己的优化器可以用这个trainer类 pytorch的就用不了了
+    # def set_parameters(self, params: Iterator[Tensor]) -> None:
+    #     self.params = list(params)
+
     def step(self):
         if self.gradient_clip is not None:
             grad_clip(self.params, self.gradient_clip)
@@ -108,3 +112,18 @@ class SGD():
 # 为什么grad clip 不集成在optimizer里面呢 ?? 这显然是一个极好的位置呀??
 # 我们可以在utils里面实现，参考 [https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html]
 # 然后再optimizer里面添加一个clip参数即可
+
+
+class OptimizerFactory:
+    def __init__(self, name: str, lr: float):
+        self.name = name
+        self.lr = lr
+
+    def new(self, model: nn.Module):
+        # 这里其实应该用反射来构建对象 因为所有的Optimizer的的构造方式都差不太多
+        if self.name == 'MySGD':
+            return SGD(params=model.parameters(), lr=self.lr)
+        elif self.name == 'Adam':
+            return torch.optim.Adam(params=model.parameters(), lr=self.lr)
+        else:
+            assert False, f'not support optimizer {self.name}'
