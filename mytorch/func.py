@@ -87,6 +87,24 @@ def batch_norm(input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, mo
     assert beta.shape == (feature_size,)
     return norm * gamma + beta
 
+
+def conv2d_batch_norm(input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, momentum: float = 0.1) -> Tensor:
+    # 只处理图像数据 也就是四维的数据
+    assert len(input.shape) == 4
+    b, c, h, w = input.shape
+    mean = input.mean(dim=(0, 2, 3), keepdim=True)
+    var = (input - mean).pow(exponent=2).mean(dim=(0, 2, 3), keepdim=True) + eps
+
+    # 其实gamma和beta的shape也应该和norm对应
+    # gamma.shape == (1, c, 1, 1)
+    # beta.shape == (1, c, 1, 1)
+    assert gamma.shape == (1, c, 1, 1)
+    assert beta.shape == (1, c, 1, 1)
+    norm = (input - mean) / var.sqrt()
+    output = gamma * norm + beta
+    return output
+
+
 # 我还是不理解layer norm 为什么要对一个向量的各个分量求均值和方差
 # https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html
 

@@ -16,6 +16,29 @@ class BatchNorm(nn.Module):
         return func.batch_norm(input, self.gamma, self.beta)
 
 
+class LinearBatchNorm(nn.Module):
+    pass
+
+
+class Conv2dBatchNorm(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.gamma: nn.Parameter | None = None
+        self.beta: nn.Parameter | None = None
+
+    def forward(self, input: Tensor) -> Tensor:
+        batch_size, channels, height, width = input.shape
+        if self.gamma is None:
+            self.gamma = nn.Parameter(torch.ones(
+                size=(1, channels, 1, 1), device=input.device, requires_grad=True))
+            self.beta = nn.Parameter(torch.zeros(
+                size=(1, channels, 1, 1), device=input.device, requires_grad=True))
+
+        output = func.conv2d_batch_norm(
+            input=input, gamma=self.gamma, beta=self.beta)  # type: ignore
+        return output
+
+
 class LayerNorm(nn.Module):
     def __init__(self, feature_size: int):
         super().__init__()

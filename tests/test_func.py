@@ -5,7 +5,7 @@
 import torch
 import torch.nn.functional as F
 from mytorch import func
-from torch import nn
+from torch import nn, Tensor
 
 # BUG:FIX Ther are plenty of 'cpu or cuda' error
 # we should find a way to handle that
@@ -65,6 +65,25 @@ def test_batch_norm():
     beta = torch.zeros(size=[num_feature])
     y = func.batch_norm(input=batch, gamma=gamma, beta=beta)
     print(y)
+
+
+def test_conv2d_batch_norm() -> None:
+    batch_size = 4
+    channels = 3
+    height = 32
+    width = 32
+    x = torch.randn(size=(batch_size, channels, height, width))
+    # https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html
+    bn2 = nn.BatchNorm2d(num_features=channels)
+    ground_truth: Tensor = bn2(x)
+    print(ground_truth.shape)
+
+    gamma = torch.ones(size=(1, channels, 1, 1))
+    beta = torch.zeros(size=(1, channels, 1, 1))
+    y = func.conv2d_batch_norm(input=x, gamma=gamma, beta=beta)
+    print(y.shape)
+
+    assert torch.all((y - ground_truth).abs() < 1e-5)
 
 
 def test_layer_norm():
