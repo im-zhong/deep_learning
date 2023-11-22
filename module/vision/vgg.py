@@ -8,6 +8,7 @@ from typing import Any
 
 class VGGBlock(nn.Module):
     def __init__(self, num_convs: int, out_channels: int):
+        super().__init__()
         self.num_convs = num_convs
         self.out_channels = out_channels
         layers: list[Any] = []
@@ -26,6 +27,7 @@ class VGGBlock(nn.Module):
 
 class VGG(nn.Module):
     def __init__(self, arch: list[tuple[int, int]]):
+        super().__init__()
         self.arch = arch
         blocks: list[VGGBlock] = []
         for num_convs, out_channels in arch:
