@@ -28,7 +28,7 @@ class NiNBlock(nn.Module):
 class NiN(nn.Module):
     def __init__(self):
         self.net = nn.Sequential(
-            NiNBlock(out_channels=96, kernel_size=11, stride=4),
+            NiNBlock(out_channels=96, kernel_size=11, stride=4, padding=0),
             nn.MaxPool2d(kernel_size=3, stride=2),
 
             NiNBlock(out_channels=256, kernel_size=5, stride=1, padding=2),
