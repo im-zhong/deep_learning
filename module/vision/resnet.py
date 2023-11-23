@@ -21,8 +21,10 @@ class ResidualBlock(nn.Module):
                 out_channels=channels, kernel_size=3, stride=1, padding=1),
             nn.LazyBatchNorm2d(),
         )
-        self.bypass = nn.LazyConv2d(
-            out_channels=channels, kernel_size=1, stride=stride) if use_bypass else None
+        self.bypass = nn.Sequential(
+            nn.LazyConv2d(out_channels=channels, kernel_size=1, stride=stride),
+            nn.LazyBatchNorm2d()
+        ) if use_bypass else None
         self.relu = nn.ReLU()
 
     def forward(self, input: Tensor) -> Tensor:
@@ -70,7 +72,7 @@ class ResNet(nn.Module):
         blocks: list[ResNetBlock] = []
         for i, (num_residuals, out_channels) in enumerate(arch):
             blocks.append(ResNetBlock(num_residuals=num_residuals,
-                          out_channels=out_channels, is_first_block=(i == 0)))
+                                      out_channels=out_channels, is_first_block=(i == 0)))
 
         last = nn.Sequential(
             nn.AdaptiveMaxPool2d(output_size=(1, 1)),

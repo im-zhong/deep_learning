@@ -3,11 +3,13 @@
 
 import torch
 from torch import nn, Tensor
+
 from mytorch import func
 
 
 class MyConv2d(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int | tuple[int, int], stride: int | tuple[int, int] = 1, padding: int | tuple[int, int] = 0, bias: bool = False):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int | tuple[int, int],
+                 stride: int | tuple[int, int] = 1, padding: int | tuple[int, int] = 0, bias: bool = False):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -29,7 +31,7 @@ class MyConv2d(nn.Module):
         kh, kw = self.kernel_size
         sh, sw = self.stride
         ph, pw = self.padding
-        return (h + 2*ph - kh)//sh + 1, (w + 2*pw - kw)//sw + 1
+        return (h + 2 * ph - kh) // sh + 1, (w + 2 * pw - kw) // sw + 1
 
     def multiin(self, inputs: Tensor, kernels: Tensor) -> Tensor:
         ci, h, w = inputs.shape
@@ -38,7 +40,8 @@ class MyConv2d(nn.Module):
         #     corr2dv2(input=add_padding(input, padding=self.padding), kernel=kernel, stride=self.stride)
 
         results: list[Tensor] = [func.corr2d(
-            input=input, padding=self.padding, kernel=kernel, stride=self.stride) for input, kernel in zip(inputs, kernels)]
+            input=input, padding=self.padding, kernel=kernel, stride=self.stride) for input, kernel in
+            zip(inputs, kernels)]
         output = torch.stack(results)
         # now output's shape is 3-d
         co, ho, wo = output.shape
@@ -68,12 +71,13 @@ class MyConv2d(nn.Module):
         output = torch.stack(
             [self.multiin(inputs=input, kernels=kernel) for kernel in kernels])
         assert output.shape == (self.out_channels, *
-                                self.calculate_output_shape(input=input[0]))
+        self.calculate_output_shape(input=input[0]))
         return output
 
 
 class MyAvgPool2d(nn.Module):
-    def __init__(self, in_channels: int, kernel_size: int | tuple[int, int], stride: int | tuple[int, int] = 1, padding: int | tuple[int, int] = 0):
+    def __init__(self, in_channels: int, kernel_size: int | tuple[int, int], stride: int | tuple[int, int] = 1,
+                 padding: int | tuple[int, int] = 0):
         super().__init__()
         self.in_channels = in_channels
         self.kernel_size = kernel_size
@@ -91,11 +95,13 @@ class MyAvgPool2d(nn.Module):
         outputs = [self.multiin_multiout(input=x) for x in input]
         return torch.stack(outputs)
 
+
 # MaxPool唯一的不同就是把avgPool改成maxpool 所以我们应该复用
 
 
 class MyMaxPool2d(nn.Module):
-    def __init__(self, in_channels: int, kernel_size: int | tuple[int, int], stride: int | tuple[int, int] = 1, padding: int | tuple[int, int] = 0):
+    def __init__(self, in_channels: int, kernel_size: int | tuple[int, int], stride: int | tuple[int, int] = 1,
+                 padding: int | tuple[int, int] = 0):
         super().__init__()
         self.in_channels = in_channels
         self.kernel_size = kernel_size
@@ -112,3 +118,39 @@ class MyMaxPool2d(nn.Module):
         b, ci, h, w = input.shape
         outputs = [self.multiin_multiout(input=x) for x in input]
         return torch.stack(outputs)
+
+
+# https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+class MyConv2dWithGroups(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int | tuple[int, int],
+                 stride: int | tuple[int, int] = 1, padding: int | tuple[int, int] = 0, groups: int = 1,
+                 use_bias: bool = True):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.groups = groups
+        self.use_bias = use_bias
+
+        # make sure groups 可以被整除
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
+
+        # 我们需要创建 groups 个 in_channels = in_channels / groups
+        # out_channels = out_channels / groups
+        # 的conv2d layer即可
+        self.convs = [MyConv2d(in_channels=int(in_channels / groups), out_channels=int(out_channels / groups),
+                               kernel_size=kernel_size, stride=stride, padding=padding, bias=use_bias)
+                      for _ in range(groups)]
+
+    def forward(self, x: Tensor) -> Tensor:
+        b, c, h, w = x.shape
+        xs = x.split(split_size=self.groups, dim=1)
+        ys = [conv(x) for conv, x in zip(self.convs, xs)]
+        output = torch.cat(ys, dim=1)
+        bo, co, ho, wo = output.shape
+        assert b == bo
+        assert co == self.out_channels
+        return output
