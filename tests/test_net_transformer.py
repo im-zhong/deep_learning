@@ -34,7 +34,7 @@ def test_Transformer():
         source_vocab), hidden_size=hidden_size, ffn_hidden_size=ffn_hidden_size, num_head=num_head, num_blocks=num_blocks, vocab=source_vocab)
     decoder = TransformerDecoder(vocab_size=len(
         target_vocab), hidden_size=hidden_size, ffn_hidden_size=ffn_hidden_size, num_head=num_head, num_blocks=num_blocks, vocab=target_vocab)
-    seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)
+    seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)  # type: ignore
 
     batch_size = 128
     num_epochs = 2

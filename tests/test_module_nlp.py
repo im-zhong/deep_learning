@@ -21,7 +21,7 @@ def test_seq2seqwithattention():
         source_vocab), embed_size=embed_size, hidden_size=hidden_size, num_layers=num_layers, vocab=source_vocab)
     decoder = AttentionDecoder(vocab_size=len(
         target_vocab), embed_size=embed_size, hidden_size=hidden_size, num_layers=num_layers)
-    seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)
+    seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)  # type: ignore
 
     batch_size = 32
     num_epochs = 2
