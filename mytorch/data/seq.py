@@ -66,7 +66,7 @@ class TimeMachineDataset(data.DataManager):  # 继承DataModule蛋用没有
         filename = 'datasets/timemachine/timemachine.txt'
         self.filename = filename
 
-        with open(self.filename) as f:
+        with open(self.filename, encoding='utf-8') as f:
             self.raw_text = f.read()
         self.vocab = Vocabulary(self.raw_text)
         self.tokens = self.vocab.tokens
@@ -371,7 +371,7 @@ class TranslationDataManager(data.DataManager):
         self.target: list[str] = []
         self.initialized = False
 
-        with open(self.filename) as f:
+        with open(self.filename, encoding='utf-8') as f:
             for line in f:
                 seqs = line.split('\t')
                 self.source.append(seqs[0])

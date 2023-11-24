@@ -3,6 +3,6 @@
 # global config
 
 conf = {
-    'device': 'cuda:3',
+    # 'device': 'cuda:3',
     'predict': False,
 }
