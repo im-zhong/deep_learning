@@ -108,10 +108,10 @@ class BNLeNet(nn.Module):
             nn.LazyBatchNorm2d(),
             # activation: sigmoid, sigmod会作用在所有元素上
             # https://pytorch.org/docs/stable/special.html#torch.special.expit
-            nn.Sigmoid(),
+            nn.ReLU(),
             # downsampling: 2x2 AvgPool2d, stride = 2
             # MyAvgPool2d(in_channels=6, kernel_size=2, stride=2),
-            nn.AvgPool2d(kernel_size=2, stride=2),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             # conv layer2
             # 5x5 Conv(6, 16)
@@ -119,10 +119,10 @@ class BNLeNet(nn.Module):
             nn.LazyConv2d(out_channels=16, kernel_size=5),
             nn.LazyBatchNorm2d(),
             # activation: sigmoid
-            nn.Sigmoid(),
+            nn.ReLU(),
             # downsampling: 2x2 AvgPool2d, stride = 2
             # MyAvgPool2d(in_channels=16, kernel_size=2, stride=2),
-            nn.AvgPool2d(kernel_size=2, stride=2),
+            nn.MaxPool2d(kernel_size=2, stride=2),
 
             # now the output shape is (b, c, h, w), but fc layer can only accept (b, f)
             # so we just flatten it
@@ -132,12 +132,12 @@ class BNLeNet(nn.Module):
             nn.LazyLinear(out_features=120),
             nn.LazyBatchNorm1d(),
             # activation
-            nn.Sigmoid(),
+            nn.ReLU(),
 
             # fc layer2
             nn.LazyLinear(out_features=84),
             nn.LazyBatchNorm1d(),
-            nn.Sigmoid(),
+            nn.ReLU(),
 
             # fc layer3
             nn.LazyLinear(out_features=10),
