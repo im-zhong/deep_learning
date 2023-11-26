@@ -3,6 +3,7 @@
 
 
 from torch import nn, Tensor
+import torch
 
 
 class ResidualBlock(nn.Module):
@@ -26,6 +27,9 @@ class ResidualBlock(nn.Module):
             nn.LazyBatchNorm2d()
         ) if use_bypass else None
         self.relu = nn.ReLU()
+        # print(stride)
+        # print(self.net)
+        # print(self)
 
     def forward(self, input: Tensor) -> Tensor:
         res = self.net(input)
@@ -40,15 +44,29 @@ class ResNetBlock(nn.Module):
         self.num_residuals = num_residuals
         self.out_channels = out_channels
 
-        self.net = nn.Sequential()
+        # print(is_first_block)
+        # self.net = nn.Sequential()
+
+        # for i in range(num_residuals):
+        #     if i == 0 and not is_first_block:
+        #         # at the first residual block, we need use bypass
+        #         # TIP: add_module 只会add一个模块上去
+        #         self.net.add_module(name='ResNetBlock', module=ResidualBlock(
+        #             channels=out_channels, stride=2, use_bypass=True))
+        #     else:
+        #         self.net.add_module(name='ResNetBlock', module=ResidualBlock(
+        #             channels=out_channels, stride=1, use_bypass=False))
+        blocks: list[ResidualBlock] = []
         for i in range(num_residuals):
             if i == 0 and not is_first_block:
                 # at the first residual block, we need use bypass
-                self.net.add_module(name='ResNetBlock', module=ResidualBlock(
+                blocks.append(ResidualBlock(
                     channels=out_channels, stride=2, use_bypass=True))
             else:
-                self.net.add_module(name='ResNetBlock', module=ResidualBlock(
+                blocks.append(ResidualBlock(
                     channels=out_channels, stride=1, use_bypass=False))
+        self.net = nn.Sequential(*blocks)
+        # print(self.net)
 
     def forward(self, input: Tensor) -> Tensor:
         return self.net(input)
@@ -57,7 +75,7 @@ class ResNetBlock(nn.Module):
 class ResNet(nn.Module):
     def __init__(self, arch: list[tuple[int, int]], num_classes: int) -> None:
         super().__init__()
-        self.arch = arch
+        self.arch: list[tuple[int, int]] = arch
         self.num_classes = num_classes
 
         # 我感觉如果这些临时的模块是不应该作为成员变量的
@@ -74,6 +92,46 @@ class ResNet(nn.Module):
             blocks.append(ResNetBlock(num_residuals=num_residuals,
                                       out_channels=out_channels, is_first_block=(i == 0)))
 
+        # for block in blocks:
+        #     print(block)
+        last = nn.Sequential(
+            nn.AdaptiveMaxPool2d(output_size=(1, 1)),
+            nn.Flatten(),
+            nn.LazyLinear(out_features=num_classes)
+        )
+
+        self.net = nn.Sequential(
+            block1,
+            *blocks,
+            last
+        )
+
+    def forward(self, input: Tensor) -> Tensor:
+        return self.net(input)
+
+
+class SmallResNet(nn.Module):
+    def __init__(self, arch: list[tuple[int, int]], num_classes: int) -> None:
+        super().__init__()
+        self.arch: list[tuple[int, int]] = arch
+        self.num_classes = num_classes
+
+        # 我感觉如果这些临时的模块是不应该作为成员变量的
+        # 因为pytorch可能会扫描到重复的module
+        block1 = nn.Sequential(
+            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.LazyBatchNorm2d(),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
+
+        blocks: list[ResNetBlock] = []
+        for i, (num_residuals, out_channels) in enumerate(arch):
+            blocks.append(ResNetBlock(num_residuals=num_residuals,
+                                      out_channels=out_channels, is_first_block=(i == 0)))
+
+        # for block in blocks:
+        #     print(block)
         last = nn.Sequential(
             nn.AdaptiveMaxPool2d(output_size=(1, 1)),
             nn.Flatten(),
@@ -91,6 +149,12 @@ class ResNet(nn.Module):
 
 
 class ResNet18(ResNet):
+    def __init__(self, num_classes: int = 10) -> None:
+        super().__init__(arch=[(2, 64), (2, 128),
+                               (2, 256), (2, 512)], num_classes=num_classes)
+
+
+class SmallResNet18(SmallResNet):
     def __init__(self, num_classes: int = 10) -> None:
         super().__init__(arch=[(2, 64), (2, 128),
                                (2, 256), (2, 512)], num_classes=num_classes)

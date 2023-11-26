@@ -12,11 +12,12 @@ My Deep Learning Codes.
 
 ## TODO
 
-1. 还差 cnn 和一些ipynb
-2. make sure all the tests are passes when we push our code to the github. but how? github action?
-3. 等cnn也弄完之后 我们需要进行下一步的重构，这就包括更加合理的架构 更加合理的命名 更加清晰的注释等
-4. 单元测试花费太多时间，削减数据集的数量，进一步减少测试时间 将测试时间控制在数秒以内
-5. d2l书上的layer_summary这个函数挺好的，看一下怎么实现的
+- [x] 还差 cnn 和一些ipynb
+- [x] make sure all the tests are passes when we push our code to the github. but how? github action?
+- [ ] 等cnn也弄完之后 我们需要进行下一步的重构，这就包括更加合理的架构 更加合理的命名 更加清晰的注释等
+- [x] 单元测试花费太多时间，削减数据集的数量，进一步减少测试时间 将测试时间控制在数秒以内
+- [x] d2l书上的layer_summary这个函数挺好的，看一下怎么实现的
+- [ ] trainer需要重构 我们需要考虑test_dataloader, 还有更合理的模型存档方式，比如loss变小，正确率提高在存档 而不是每次都存档
 
 ## 我们不禁要问一个问题，在什么地方应用type hint最为合适？
 
@@ -28,7 +29,7 @@ My Deep Learning Codes.
 1. put all the datasets under the data/ folder
 2. 分层训练，这样就可以训练大模型了
 3. 为了在jupyter notebook里面使用我们编写的package，需要在根目录下提供一个.env文件并在内部指定PYTHONPATH=your-root-dir [https://github.com/microsoft/vscode-jupyter/issues/9436]
-4. jupyter notebook对git非常不友好 垃圾格式 不用了
+4. jupyter notebook对git非常不友好 垃圾格式 不用了 不要再用了 球球了 全是错误 不会自动加载新代码
 
 ## packages
 
