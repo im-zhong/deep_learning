@@ -2,15 +2,15 @@
 # zhangzhong
 # functional
 
+# from torch import LongTensor
+from typing import Callable
+
 import torch
+import torch.nn.functional as F
 # https://pytorch.org/docs/stable/tensors.html
 # LongTensor: dtype = 64bit signed integer
 from torch import Tensor
-# from torch import LongTensor
-from typing import Callable
-from . import config
-import torch.nn.functional as F
-import matplotlib.pyplot as plt
+
 
 # Takes LongTensor with index values of shape (*) and returns a tensor of shape (*, num_classes)
 # that have zeros everywhere except where the index of last dimension matches the corresponding value of the input tensor,
@@ -34,7 +34,7 @@ def one_hot(input: Tensor, num_classes: int = -1) -> Tensor:
         input=input) and not torch.is_complex(input=input)
 
     shape = input.shape
-    num_classes = num_classes if num_classes != -1 else int(torch.max(input))+1
+    num_classes = num_classes if num_classes != -1 else int(torch.max(input)) + 1
     result = torch.zeros(size=(*input.shape, num_classes), dtype=torch.long, device=input.device
                          ).reshape(shape=(-1, num_classes))
     # 我们遍历result的最后一个维度
@@ -63,6 +63,7 @@ def embedding(input: Tensor, weight: Tensor) -> Tensor:
     result = result @ weight
     return result.reshape(shape=(*input.shape, embed_size))
 
+
 # https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
 # 这个函数应该只负责batch norm的计算而已
 
@@ -74,14 +75,17 @@ def batch_norm(input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, mo
     # mean和sigma的计算方法有两种
     # 1. 在训练时，使用一个batch的数据进行计算
     # 2. 在eval时，使用running average计算，也就是统计所有的输入，滚动计算x = (1-m)x + mx' x'表示新的输入，也就是新数据只占0.1
-    mean = input.mean(dim=0)
+    mean = input.mean(dim=0, keepdim=True)
     # sigma = input.norm(p='2', dim=0)
     # https://pytorch.org/docs/stable/generated/torch.linalg.vector_norm.html
-    sigma = torch.linalg.vector_norm(input, ord=2, dim=0)
-    assert mean.shape == (feature_size,)
-    assert sigma.shape == (feature_size,)
+    # 这也不对呀 明明是方差 怎么会是2范数呢？啥都不懂
+    # sigma = torch.linalg.vector_norm(input, ord=2, dim=0)
+    var = (input - mean).pow(2).mean(dim=0, keepdim=True) + eps
+    # assert mean.shape == (feature_size,)
+    # assert sigma.shape == (feature_size,)
 
-    norm = (input - mean) / (sigma + eps)
+    # norm = (input - mean) / (sigma + eps)
+    norm = (input - mean) / var.sqrt()
     assert norm.shape == input.shape
     assert gamma.shape == (feature_size,)
     assert beta.shape == (feature_size,)
@@ -154,7 +158,7 @@ def split_multi_head(input: Tensor, num_head: int) -> Tensor:
 
     # 3. 然后将batch_size和num_head进行合并
     z = y.reshape(-1, num_seq, head_hidden_size)
-    assert z.shape == (batch_size*num_head, num_seq, head_hidden_size)
+    assert z.shape == (batch_size * num_head, num_seq, head_hidden_size)
     return z
 
 
@@ -207,7 +211,7 @@ def make_target_valid_lens(batch_size: int, max_len: int, device) -> Tensor:
     # target_valid_lens.shape = (batch_size, seq_len)
     # 而且不同的target输入的seq_len是不同的 所以这个东西还需要动态生成
     # TIP: valid_lens的类型应该是int
-    lens = torch.arange(start=1, end=max_len+1,
+    lens = torch.arange(start=1, end=max_len + 1,
                         dtype=torch.int, device=device)
     # lens是行向量
     # 然后纵向扩展到batch_size
@@ -248,12 +252,13 @@ def add_padding(input: Tensor, padding: int | tuple[int, int]) -> Tensor:
     padding = make_tuple(padding)
     ph, pw = padding
 
-    output = torch.zeros(size=(h+ph*2, w + pw*2), device=input.device)
-    output[ph:ph+h, pw:pw+w] = input
+    output = torch.zeros(size=(h + ph * 2, w + pw * 2), device=input.device)
+    output[ph:ph + h, pw:pw + w] = input
     return output
 
 
-def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[[Tensor], Tensor], padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
+def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[[Tensor], Tensor],
+                padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
     assert len(input.shape) == 2
     # assert len(kernel.shape) == 2
     # 现在去掉这个假设 我们的代码需要作出什么改动？
@@ -272,7 +277,7 @@ def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[
     kh, kw = make_tuple(kernel_size)
     sh, sw = make_tuple(stride)
 
-    oh, ow = (h - kh)//sh + 1, (w - kw)//sw + 1
+    oh, ow = (h - kh) // sh + 1, (w - kw) // sw + 1
     output = torch.zeros(size=(oh, ow), device=input.device)
 
     # 现在就是确定pad
@@ -298,28 +303,33 @@ def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[
             # 在input上 以(row+pad, col+pad)为中心，选取变长为kernel_size
             # 刚好窗口的起始位置是row+pad-pad=row 即(row, pad) on input
             # perfect!
-            window = input[row*sh:row*sh+kh, col*sw:col*sw+kw]
+            window = input[row * sh:row * sh + kh, col * sw:col * sw + kw]
             output[row, col] = op(window)
 
     return output
 
 
-def corr2d(input: Tensor, kernel: Tensor, padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
+def corr2d(input: Tensor, kernel: Tensor, padding: int | tuple[int, int] = 0,
+           stride: int | tuple[int, int] = 1) -> Tensor:
     h, w = input.shape
     assert len(kernel.shape) == 2
     kh, kw = kernel.shape
-    return corr2d_impl(input, op=lambda window: (kernel * window).sum(), kernel_size=(kh, kw), padding=padding, stride=stride)
+    return corr2d_impl(input, op=lambda window: (kernel * window).sum(), kernel_size=(kh, kw), padding=padding,
+                       stride=stride)
+
 
 # https://pytorch.org/docs/stable/generated/torch.nn.AvgPool2d.html
 
 
 # pool和corr一样 他们期望输入是二维的
 # 但是实际上的输入是四维的 所以我们需要做和Conv2d一样的处理
-def avg_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
+def avg_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0,
+               stride: int | tuple[int, int] = 1) -> Tensor:
     return corr2d_impl(input, op=torch.mean, kernel_size=kernel_size, padding=padding, stride=stride)
 
 
-def max_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
+def max_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0,
+               stride: int | tuple[int, int] = 1) -> Tensor:
     return corr2d_impl(input, op=torch.max, kernel_size=kernel_size, padding=padding, stride=stride)
 
 
@@ -360,6 +370,7 @@ def masked_softmax(X, valid_lens, my_mask=None):
     """Perform softmax operation by masking elements on the last axis.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
+
     # X: 3D tensor, valid_lens: 1D or 2D tensor
     def _sequence_mask(X, valid_len, value: float = 0):
         maxlen = X.size(1)

@@ -3,11 +3,23 @@
 # linear layer
 
 import torch
-from torch import device, nn, Tensor
-import mytorch.config
 from torch import Tensor
+from torch import device, nn
+
 from mytorch import func
 
+
+# TODO: 原来如此，其实就是整一个随机的输入，然后整个走一遍网络 然后输出shape就可以了
+# 其实这样做非常好啊，也非常简单 但是可以很直观让你看到自己的网络设计
+# 我们还可以对这个函数进行扩展，比如计算出所有参数的个数，从而统计参数量
+# def layer_summary(self, X_shape):
+#     """Defined in :numref:`sec_lenet`"""
+#     X = d2l.randn(*X_shape)
+#     for layer in self.net:
+#         X = layer(X)
+#         print(layer.__class__.__name__, 'output shape:\t', X.shape)
+# https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+# 其实nn.Module是有这个函数的
 
 class LinearRegressionScratch(nn.Module):
     # 这是我们的第一个模型
@@ -53,6 +65,7 @@ class LinearRegressionScratch(nn.Module):
             self.b = nn.Parameter(torch.randn(size=(1,), requires_grad=True,
                                               device=X.device))
         return X @ self.w + self.b
+
 
 # net = torch.nn.Linear(in_feature, out_feature)
 # Applies a linear transformation to the incoming data: y = xA^T + b
@@ -138,7 +151,8 @@ class LinearClassifier(nn.Module):
 
 
 class MLPScratch(nn.Module):
-    def __init__(self, in_features: int, out_features: int, num_hidden_1: int, num_hidden_2: int, dropout_1: float = 0.0, dropout_2: float = 0.0, device: device = torch.device('cpu')) -> None:
+    def __init__(self, in_features: int, out_features: int, num_hidden_1: int, num_hidden_2: int,
+                 dropout_1: float = 0.0, dropout_2: float = 0.0, device: device = torch.device('cpu')) -> None:
         super().__init__()
         # we should not use this dynamic add attr to a class
         # it is bad for type checker
