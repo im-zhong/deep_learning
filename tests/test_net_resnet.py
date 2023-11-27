@@ -6,6 +6,7 @@ import torchsummary  # type: ignore
 from mytorch.data.cifar10 import CIFAR10Dataset
 import torch
 from mytorch import training, utils
+import json
 
 
 def test_simple_resnet() -> None:
@@ -15,9 +16,6 @@ def test_simple_resnet() -> None:
 
 
 def test_small_resnet() -> None:
-    net = SmallResNet18()
-    torchsummary.summary(net, input_size=(3, 32, 32),
-                         batch_size=1, device='cpu')
 
     batch_size = 128
     cifar10 = CIFAR10Dataset()
@@ -34,23 +32,42 @@ def test_small_resnet() -> None:
     # 果然是这样 同样的网络结果 换一个数据集 结果就好很多了 看来还是得上resnet呀
     # 实在是太容易过拟合了 数据增强 启动！
     lr: float = 0.01
-    num_epochs = 200
+    num_epochs = 100
+    tag = 'resnet18'
     net = SmallResNet18()
 
-    optimizer = torch.optim.Adam(params=net.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(params=net.parameters(), lr=lr)
     # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer=optimizer, T_max=num_epochs)
 
-    trainer = training.Trainer(
+    trainer = training.TrainerV2(
         model=net,
         loss_fn=torch.nn.CrossEntropyLoss(),
-        optimizer=scheduler,
+        optimizer=optimizer,
         num_epochs=num_epochs,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
+        test_dataloader=test_dataloader,
         scheduler=scheduler,
-        device=utils.get_device(),
-        is_test=False)
+        device=utils.get_device())
 
-    trainer.train(tag='SmallResNet18', calculate_accuracy=True)
+    trainer.train(tag=tag)
+
+
+def test_json():
+    result = training.Result()
+    s = json.dumps(result.to_dict())
+    print(s)
+    r = json.loads(s)
+    print(r)
+    # 我们还要提供一个函数 用来将json转换为Result对象
+    rr = training.Result.from_dict(r)
+    print(rr.epoch, rr.train_loss, rr.val_loss)
+
+
+def test_pytorch() -> None:
+    if torch.cuda.is_available():
+        print('cuda is avaliable')
+    else:
+        print('cuda is not avaliable')

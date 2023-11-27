@@ -7,7 +7,7 @@ My Deep Learning Codes.
 1. basic deep learning library, mydl
 2. every single other networks, use a separate folder, and group by them by categories, such as CNN, GPT, Diffusion, etc
 3. how would that be? I don't want to use PYTHONPATH, so how to structure my code?
-4. dl/mytorch, ßdl/modules/CNN, LeNet, Transformers, ..., whereis my tests? it should be close to my code
+4. dl/mytorch, dl/modules/CNN, LeNet, Transformers, ..., whereis my tests? it should be close to my code
 5. 因为python的路径寻找规则，当我们使用vscode直接运行当前文件的时候，python解释器会从python脚本的路径开始查找其他的模块，这当然找不到，所以我们的解决方案就是使用pytest来运行所有的程序，这样的话所有的程序都是写成单元测试的样子，这种方式非常有效！
 
 ## TODO
@@ -30,8 +30,9 @@ My Deep Learning Codes.
 2. 分层训练，这样就可以训练大模型了
 3. 为了在jupyter notebook里面使用我们编写的package，需要在根目录下提供一个.env文件并在内部指定PYTHONPATH=your-root-dir [https://github.com/microsoft/vscode-jupyter/issues/9436]
 4. jupyter notebook对git非常不友好 垃圾格式 不用了 不要再用了 球球了 全是错误 不会自动加载新代码
+5. start tensorboard: `conda deactivate` back to base env; then `tmux`; then `conda activate ml`; then `tensorboard --logdir=runs --bind_all`; then `ctrl+b d` to detach the tmux session
 
 ## packages
 
 1. pytorch
-2. pip install tensorboard numpy matplotlib tqdm pytest
+2. pip install tensorboard numpy matplotlib tqdm pytest torchinfo
