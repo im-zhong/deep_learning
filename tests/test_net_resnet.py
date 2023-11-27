@@ -34,15 +34,22 @@ def test_small_resnet() -> None:
     # 果然是这样 同样的网络结果 换一个数据集 结果就好很多了 看来还是得上resnet呀
     # 实在是太容易过拟合了 数据增强 启动！
     lr: float = 0.01
-    num_epochs = 100
+    num_epochs = 200
     net = SmallResNet18()
+
+    optimizer = torch.optim.Adam(params=net.parameters(), lr=lr)
+    # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=optimizer, T_max=num_epochs)
+
     trainer = training.Trainer(
         model=net,
         loss_fn=torch.nn.CrossEntropyLoss(),
-        optimizer=torch.optim.Adam(params=net.parameters(), lr=lr),
+        optimizer=scheduler,
         num_epochs=num_epochs,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
+        scheduler=scheduler,
         device=utils.get_device(),
         is_test=False)
 

@@ -23,7 +23,7 @@ import os.path
 class Trainer:
     """The base class for training models with data."""
 
-    def __init__(self, *, model, loss_fn, optimizer, num_epochs, train_dataloader, val_dataloader, num_gpus=0, gradient_clip_val=0, is_test: bool = True, device: device = torch.device('cpu')):
+    def __init__(self, *, model, loss_fn, optimizer, num_epochs, train_dataloader, val_dataloader, scheduler=None, num_gpus=0, gradient_clip_val=0, is_test: bool = True, device: device = torch.device('cpu')):
         assert num_gpus == 0, 'No GPU support yet'
         # 用这个函数 类型检查系统会complain 所以还是不要用了
         # 你也不知道你引进来了什么
@@ -34,6 +34,7 @@ class Trainer:
         self.optimizer = optimizer
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
+        self.scheduler = scheduler
         self.num_gpus = num_gpus
         self.gradient_clip_val = gradient_clip_val
         self.writer = SummaryWriter()
@@ -147,6 +148,10 @@ class Trainer:
                 # self.optimizer.set_parameters(self.model.parameters())
                 self.optimizer.step()
                 self.optimizer.zero_grad()
+
+            # after every epoch, update the learning rate
+            if self.scheduler is not None:
+                self.scheduler.step()
 
             # 每个epoch结束之后进行一次validation
             self.model.eval()
