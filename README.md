@@ -39,10 +39,5 @@ My Deep Learning Codes.
 
 ## packages
 
-<<<<<<< HEAD
 1. pip install torch torchvision torchaudio
 2. pip install tensorboard numpy matplotlib tqdm pytest torchsummary
-=======
-1. pytorch
-2. pip install tensorboard numpy matplotlib tqdm pytest torchinfo
->>>>>>> 6dcfa702e53d92f6c9b2e1a103ed6db0d991dc79
