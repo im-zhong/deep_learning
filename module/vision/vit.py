@@ -27,10 +27,10 @@ class PositionalEmbedding(nn.Module):
 
     def forward(self, inputs: Tensor) -> Tensor:
         # inputs.shape = (b, s, h)
-        _, seq_size, _ = inputs.shape
+        # _, seq_size, _ = inputs.shape
         # selected_positional_embedding = self.positional_embedding[:, :seq_size]
         # assert selected_positional_embedding.shape == (1, seq_size, self.hidden_size)
-        return inputs + self.positional_embedding[:, :seq_size]
+        return inputs + self.positional_embedding
 
 
 class ViTMLP(nn.Module):
@@ -66,7 +66,10 @@ class ViTBlock(nn.Module):
     def forward(self, inputs: Tensor):
         # residual connections 1: multihead attention
         x = self.ln1(inputs)
+        # BUG:FIX, attention的参数中q,k,v应该拿到x的三个深拷贝的副本
+        # 不对，没有任何区别
         attention_output, _ = self.attention(query=x, key=x, value=x)
+        # attention_output, _ = self.attention(*([self.ln1(inputs)] * 3))
         inputs = inputs + attention_output
         # residual connection 2: mlp
         return inputs + self.mlp(self.ln2(inputs))
@@ -78,7 +81,7 @@ class ViT(nn.Module):
                  num_heads: int, mlp_hidden_size: int):
         super().__init__()
         self.hidden_size = hidden_size
-        self.cls = torch.zeros(size=(1, 1, hidden_size))
+        self.cls = nn.Parameter(torch.zeros(size=(1, 1, hidden_size)))
         self.patch_embedding = PatchEmbedding(hidden_size=hidden_size,
                                               kernel_size=kernel_size,
                                               stride=stride)
@@ -100,18 +103,21 @@ class ViT(nn.Module):
         batch_size, channels, height, weight = images.shape
         x = self.patch_embedding(images)
         # assert x.shape == (batch_size, seq_size, self.hidden_size)
-        batch_size1, seq_size, hidden_size = x.shape
-        assert batch_size == batch_size1
-        assert hidden_size == self.hidden_size
+        # batch_size1, seq_size, hidden_size = x.shape
+        # assert batch_size == batch_size1
+        # assert hidden_size == self.hidden_size
 
         # add cls
-        device = x.device
+        # device = x.device
         # first copy cls to the device of x
-        clss = self.cls.repeat(batch_size, 1, 1).to(device)
+        # clss = self.cls.repeat(batch_size, 1, 1).to(device)
 
-        y = torch.concat([clss, x], dim=1)
-        assert y.shape == (batch_size, seq_size + 1, hidden_size)
-        y.requires_grad_()
+        # y = torch.concat([clss, x], dim=1)
+        # 不对，我理解错了，这里的y并不需要有required_grads=True
+        # 因为
+        y: Tensor = torch.cat((self.cls.expand(x.shape[0], -1, -1), x), dim=1)
+        # assert y.shape == (batch_size, seq_size + 1, hidden_size)
+        # y.requires_grad_()
 
         # add positional embedding
         z = self.positional_embedding(y)

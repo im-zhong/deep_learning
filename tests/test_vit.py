@@ -118,16 +118,16 @@ def test_vit_classifier():
     assert outputs.shape == (batch_size, output_size)
 
 
-def test_train_vit_classifier():
-    hidden_size = 64
+def test_train_vit_classifier() -> None:
+    hidden_size = 128
     patch_size = 8
     kernel_size = patch_size
     stride = patch_size
     num_heads = 8
-    dropout = 0.5
-    mlp_hidden_size = 128
+    dropout = 0.1
+    mlp_hidden_size = 256
     max_len = 17
-    num_blocks = 2
+    num_blocks = 10
     output_size = 10
     model = vit.ViTClassifier(hidden_size=hidden_size,
                               kernel_size=kernel_size,
@@ -139,12 +139,16 @@ def test_train_vit_classifier():
                               mlp_hidden_size=mlp_hidden_size,
                               output_size=output_size)
 
-    lr: float = 0.02
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    lr: float = 0.1
+    num_epochs = 100
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=optimizer, T_max=num_epochs)
 
-    num_epochs = 2
-    batch_size = 512
-    cifar10 = CIFAR10Dataset()
+    
+    batch_size = 128
+    num_workers = 16
+    cifar10 = CIFAR10Dataset(num_workers=num_workers)
     trainer = TrainerV2(model=model,
                         loss_fn=nn.CrossEntropyLoss(),
                         optimizer=optimizer,
@@ -152,7 +156,8 @@ def test_train_vit_classifier():
                         train_dataloader=cifar10.get_train_dataloader(batch_size=batch_size),
                         val_dataloader=cifar10.get_val_dataloader(batch_size=batch_size),
                         test_dataloader=cifar10.get_test_dataloader(batch_size=batch_size),
-                        device=utils.get_device())
+                        scheduler=scheduler,
+                        device=torch.device('cuda:0'))
 
     tag = 'vit'
     trainer.train(tag=tag)
