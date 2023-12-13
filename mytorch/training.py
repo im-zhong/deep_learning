@@ -390,7 +390,7 @@ class TrainerV2:
         # 1. 判断 snapshots/{tag} 文件夹是否存在，如果不存在则创建
         path = self.folder_path(tag=tag)
         os.makedirs(name=path, exist_ok=True)
-        # self.summary(tag=tag)
+        self.summary(tag=tag)
 
         self.model = self.load_model(tag=tag)
         # send model parameters to device

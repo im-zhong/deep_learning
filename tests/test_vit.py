@@ -6,7 +6,7 @@ from torch import nn
 
 from module.vision import vit
 from mytorch import utils
-from mytorch.data.cifar10 import CIFAR10Dataset
+from mytorch.data.cifar10 import CIFAR10Dataset, cifar10_predict
 from mytorch.training import TrainerV2
 
 
@@ -119,13 +119,13 @@ def test_vit_classifier():
 
 
 def test_train_vit_classifier() -> None:
-    hidden_size = 128
+    hidden_size = 256
     patch_size = 8
     kernel_size = patch_size
     stride = patch_size
     num_heads = 8
-    dropout = 0.1
-    mlp_hidden_size = 256
+    dropout = 0.01
+    mlp_hidden_size = 1024
     max_len = 17
     num_blocks = 10
     output_size = 10
@@ -140,12 +140,14 @@ def test_train_vit_classifier() -> None:
                               output_size=output_size)
 
     lr: float = 0.1
-    num_epochs = 100
+    num_epochs = 0
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    # scheduler is better than Adam
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer=optimizer, T_max=num_epochs)
 
     
+    device = utils.get_device()
     batch_size = 128
     num_workers = 16
     cifar10 = CIFAR10Dataset(num_workers=num_workers)
@@ -157,7 +159,19 @@ def test_train_vit_classifier() -> None:
                         val_dataloader=cifar10.get_val_dataloader(batch_size=batch_size),
                         test_dataloader=cifar10.get_test_dataloader(batch_size=batch_size),
                         scheduler=scheduler,
-                        device=torch.device('cuda:0'))
+                        device=device)
 
-    tag = 'vit'
+    tag = 'vit3'
     trainer.train(tag=tag)
+    
+    # predict
+    pretrained_model: nn.Module = trainer.model
+    images = ['imgs/pattern_recognition/J20.jpg',
+              'imgs/pattern_recognition/M7.png',
+              'imgs/pattern_recognition/101.png'
+              ]
+    for image in images:
+        cifar10_predict(model=pretrained_model, device=device, path=image)
+    
+
+    

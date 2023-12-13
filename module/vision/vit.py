@@ -115,6 +115,7 @@ class ViT(nn.Module):
         # y = torch.concat([clss, x], dim=1)
         # 不对，我理解错了，这里的y并不需要有required_grads=True
         # 因为
+        self.cls = self.cls.to(x.device)
         y: Tensor = torch.cat((self.cls.expand(x.shape[0], -1, -1), x), dim=1)
         # assert y.shape == (batch_size, seq_size + 1, hidden_size)
         # y.requires_grad_()

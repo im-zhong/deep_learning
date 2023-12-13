@@ -3,7 +3,9 @@
 
 import torchvision  # type: ignore
 import torch.utils.data
-
+from torch import nn, Tensor
+import os.path
+from PIL import Image
 
 class CIFAR10Dataset:
     def __init__(self, num_workers = 0, splits: list[float] = [0.8, 0.2]) -> None:
@@ -63,3 +65,18 @@ class CIFAR10Dataset:
 
     def get_test_dataloader(self, batch_size):
         return torch.utils.data.DataLoader(dataset=self.cifar_test, batch_size=batch_size, shuffle=False, num_workers=self.num_workers)
+
+def cifar10_predict(model, device, path):
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                        (0.2023, 0.1994, 0.2010)),
+    ])
+    image: Tensor = transform(Image.open(path).convert("RGB")).to(device) # type: ignore
+    assert image.shape == (3, 32, 32)
+    image = image.unsqueeze(dim=0)
+    assert image.shape == (1, 3, 32, 32)
+    logits = model(image)
+    assert logits.shape == (1, 10)
+    categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    print(f'{os.path.basename(path)} is classified as {categories[logits.argmax().item()]}.')
