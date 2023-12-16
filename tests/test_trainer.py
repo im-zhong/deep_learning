@@ -6,6 +6,10 @@ from mytorch.data import linear
 import mytorch.net
 import mytorch.training
 import mytorch.optim as optim
+from torch import nn
+from matplotlib import pyplot as plt
+from mytorch import utils
+from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
 
 def test_Trainer():
@@ -56,3 +60,35 @@ def test_Trainer():
     # 训练完成之后 输出一下模型参数
     # tensor([ 2.0138, -3.3883], requires_grad=True) tensor(4.1900, requires_grad=True)
     print(model.w, model.b)
+
+
+def test_scheduler() -> None:
+    model = nn.Linear(10, 2)
+
+    lr: float = 0.1
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    warmup_epochs = 10
+    num_epochs = 100
+    scheduler = SequentialLR(
+        optimizer=optimizer,
+        schedulers=[
+            # start_factor就是最开始的时候的学习率 = optimizer.lr*start_factor
+            # 在total_iters之前，学习率线性增加，直到学习达到lr
+            LinearLR(optimizer=optimizer, start_factor=0.1, total_iters=warmup_epochs),
+            # 学习率从lr开始余弦下降
+            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs-warmup_epochs)
+        ],
+        # milestones就是当epoch到达warmup_epochs的时候切换到下一个scheduler
+        milestones=[warmup_epochs]
+    )
+    
+    # 把学习率画出来 看看对不对
+    lrs = []
+    for epoch in range(num_epochs):
+        print(optimizer.param_groups[0]['lr'])
+        lrs.append(optimizer.param_groups[0]['lr'])
+        scheduler.step()
+        
+    # 太对了，多么漂亮的曲线！
+    plt.plot(lrs)
+    utils.mysavefig('test_scheduler.png')

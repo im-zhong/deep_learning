@@ -41,7 +41,7 @@ def test_train_mlp() -> None:
                         scheduler=scheduler,
                         device=device)
     
-    tag = 'mlp_2'
+    tag = 'mlp_3'
     trainer.train(tag=tag)
     
     # predict

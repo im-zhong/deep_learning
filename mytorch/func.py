@@ -1,6 +1,7 @@
 # 2023/10/15
 # zhangzhong
 # functional
+# 主要是用来写跟模型架构有关的函数
 
 # from torch import LongTensor
 from typing import Callable

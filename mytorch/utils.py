@@ -5,7 +5,7 @@
 import matplotlib.pyplot as plt
 import os.path
 import torch
-from torch import device
+from torch import device, Tensor
 import random
 
 
@@ -25,3 +25,28 @@ def get_device() -> device:
         return device(f'cuda:{gpu_id}')
     else:
         return device('cpu')
+
+def top1_error_rate(logits: Tensor, labels: Tensor):
+    # 假设输入是batch的，这是合理的假设
+    batch_size, num_classes = logits.shape
+    predict_labels = logits.argmax(dim=1)
+    assert predict_labels.shape == labels.shape
+    # count the error
+    return (predict_labels != labels).int().sum().item()
+
+def top5_error_rate(logits: Tensor, labels: Tensor):
+    # https://pytorch.org/docs/stable/generated/torch.topk.html
+    # Returns the k largest elements of the given input tensor along a given dimension.
+    batch_size, num_classes = logits.shape
+    assert num_classes >= 5
+    _, top5_labels = logits.topk(k=5, dim=1)
+    assert top5_labels.shape == (batch_size, 5)
+    # correct = torch.isin(labels, top5_labels).int().sum().item()
+    # correct = 0
+    # for i in range(batch_size):
+    #     if labels[i] in top5_labels[i]:
+    #         correct += 1
+    
+    # correct = torch.any(top5_labels.T == labels, dim=0).sum().item()
+    # return batch_size - correct
+    return torch.all(top5_labels.T != labels, dim=0).sum().item()

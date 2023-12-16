@@ -127,3 +127,14 @@ class OptimizerFactory:
             return torch.optim.Adam(params=model.parameters(), lr=self.lr)
         else:
             assert False, f'not support optimizer {self.name}'
+
+
+class WarmUpCosineScheduler():
+    def __init__(self, optimizer: SGD, warmup_epochs: int, max_epochs: int):
+        self.optimizer = optimizer
+        self.warmup_epochs = warmup_epochs
+        self.max_epochs = max_epochs
+        self.current_epoch = 0
+
+    def step(self):
+        pass

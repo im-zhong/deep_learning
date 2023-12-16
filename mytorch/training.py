@@ -22,6 +22,7 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 import json
 import torchinfo
+from mytorch import utils
 
 
 # TODO: 我有一个想法，对于我们训练过程中的每一个中间过程都应该保存下来
@@ -213,12 +214,19 @@ class Result:
     val_accuracy: float = 0
     test_loss: float = 0
     test_accuracy: float = 0
+    val_top1_error_rate: float = 0
+    val_top5_error_rate: float = 0
+    test_top1_error_rate: float = 0
+    test_top5_error_rate: float = 0
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: "Result") -> bool:
         return self.val_accuracy < other.val_accuracy and self.test_accuracy < other.test_accuracy
 
-    def __gt__(self, other) -> bool:
-        return self.val_accuracy > other.val_accuracy or self.test_accuracy > other.test_accuracy
+    def __gt__(self, other: "Result") -> bool:
+        # 我们是不应该通过test_accuracy来保存的 因为我们根本就不知道
+        # 还有就是我们需要固定随机数种子 不然每次重新训练都会导致val_accuracy暴涨 这根本没有任何意义
+        # return self.val_accuracy > other.val_accuracy or self.test_accuracy > other.test_accuracy
+        return self.val_accuracy > other.val_accuracy
 
     def to_dict(self) -> dict:
         return self.__dict__
@@ -324,7 +332,15 @@ class TrainerV2:
         batch_size, _ = logits.shape
         return int((predict_labels == labels).int().sum()), batch_size
 
-    def train_epoch(self) -> Tensor:
+    def error_rate_batch(self, logits: Tensor, labels: Tensor) -> tuple[int, int, int]:
+        batch_size, _ = logits.shape
+        top1_errors = utils.top1_error_rate(logits=logits, labels=labels)
+        top5_errors = utils.top5_error_rate(logits=logits, labels=labels)
+        return int(top1_errors), int(top5_errors), batch_size
+
+
+
+    def train_epoch(self, dataloader: DataLoader) -> float:
         # set to training mode
         self.model.train()
         # computing the loss for every minibatch on the GPU and reporting it back to the usr on the command line
@@ -335,7 +351,7 @@ class TrainerV2:
 
         x: Tensor
         y: Tensor
-        for x, y in tqdm(self.train_dataloader):
+        for x, y in tqdm(dataloader):
             # send data to device
             x = x.to(device=self.device)
             y = y.to(device=self.device)
@@ -356,9 +372,9 @@ class TrainerV2:
         if self.scheduler is not None:
             self.scheduler.step()
 
-        return training_loss
+        return float(training_loss / len(dataloader))
 
-    def eval_epoch(self, dataloader: DataLoader) -> tuple[Tensor, float]:
+    def eval_epoch(self, dataloader: DataLoader) -> tuple[float, float, float, float]:
         # set to evaluation mode
         self.model.eval()
         val_loss: Tensor = torch.tensor(
@@ -366,6 +382,8 @@ class TrainerV2:
         # TODO: this may hurt performance, do some tests, if it hurts performance, move it to gpu
         accuracy: int = 0
         num_examples: int = 0
+        top1_errors: int = 0
+        top5_errors: int = 0
 
         # ugly type hint
         x: Tensor
@@ -382,9 +400,12 @@ class TrainerV2:
                 # calculate accuracy, only for cross entropy loss, classification
                 accuracy_batch, num_batch = self.accuracy_batch(
                     logits=y_hat, labels=y)
+                top1_errors_batch, top5_errors_batch, _ = self.error_rate_batch(logits=y_hat, labels=y)
                 accuracy += accuracy_batch
+                top1_errors += top1_errors_batch
+                top5_errors += top5_errors_batch
                 num_examples += num_batch
-        return val_loss, float(accuracy) / float(num_examples)
+        return float(val_loss / len(dataloader)), float(accuracy) / float(num_examples), float(top1_errors) / float(num_examples), float(top5_errors) / float(num_examples)
 
     def train(self, tag: str) -> None:
         # 1. 判断 snapshots/{tag} 文件夹是否存在，如果不存在则创建
@@ -397,27 +418,25 @@ class TrainerV2:
         self.model = self.model.to(self.device)
 
         for epoch in range(self.num_epochs):
-            train_loss = self.train_epoch()
-            val_loss, val_accuracy = self.eval_epoch(self.val_dataloader)
-            test_loss, test_accuracy = self.eval_epoch(self.test_dataloader)
+            train_loss = self.train_epoch(self.train_dataloader)
+            val_loss, val_accuracy, val_top1_error_rate, val_top5_error_rate = self.eval_epoch(self.val_dataloader)
+            test_loss, test_accuracy, test_top1_error_rate, test_top5_error_rate = self.eval_epoch(self.test_dataloader)
 
             # write training result to tensorboard
             tag_scalar_dict = {
-                'train_loss': float(train_loss) / len(self.train_dataloader),
-                'val_loss': val_loss / len(self.val_dataloader),
+                'train_loss': train_loss,
+                'val_loss': val_loss,
+                'test_loss': test_loss,
                 'val_accuracy': val_accuracy,
-                'test_loss': test_loss / len(self.test_dataloader),
-                'test_accuracy': test_accuracy}
+                'test_accuracy': test_accuracy,
+                'val_top1_error_rate': val_top1_error_rate,
+                'val_top5_error_rate': val_top5_error_rate,
+                'test_top1_error_rate': test_top1_error_rate,
+                'test_top5_error_rate': test_top5_error_rate    
+            }
             self.writer.add_scalars(
                 main_tag=tag, tag_scalar_dict=tag_scalar_dict, global_step=epoch)
 
             # save model based on result
-            result = Result(
-                epoch=epoch,
-                train_loss=train_loss.item(),
-                val_loss=val_loss.item(),
-                val_accuracy=val_accuracy,
-                test_loss=test_loss.item(),
-                test_accuracy=test_accuracy
-            )
+            result = Result.from_dict(d=tag_scalar_dict)
             self.save_model(tag=tag, result=result)
