@@ -16,11 +16,13 @@ My Deep Learning Codes.
 
 - [ ] 还差 scratch/quick_test.ipynb
 - [x] make sure all the tests are passes when we push our code to the github. but how? github action?
-- [ ] 等cnn也弄完之后 我们需要进行下一步的重构，这就包括更加合理的架构 更加合理的命名 更加清晰的注释等
+- [x] 等cnn也弄完之后 我们需要进行下一步的重构，这就包括更加合理的架构 更加合理的命名 更加清晰的注释等
 - [x] 单元测试花费太多时间，削减数据集的数量，进一步减少测试时间 将测试时间控制在数秒以内
 - [x] d2l书上的layer_summary这个函数挺好的，看一下怎么实现的
 - [ ] trainer需要重构 我们需要考虑test_dataloader, 还有更合理的模型存档方式，比如loss变小，正确率提高在存档 而不是每次都存档
+- [ ] 修改模型保存时json文件的loss计算方式，应该保存平均的而不是全部的和，accuracy换成error rate 这样所有的曲线就都是下降的了
 - [ ] 实现TOP-1 TOP-5 error rate on TrainerV2
+- [ ] 实现WarmUpCosine Learning Scheduler
 
 ## DataMining Ideas
 1. 根据AlexNet和ResNet在做一个数据集的分类，数据处理，实现，调参都可以参考他们
