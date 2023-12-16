@@ -22,7 +22,7 @@ def test_train_mlp() -> None:
     )
     
     lr: float = 0.1
-    num_epochs = 0
+    num_epochs = 100
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer=optimizer, T_max=num_epochs)
@@ -41,7 +41,7 @@ def test_train_mlp() -> None:
                         scheduler=scheduler,
                         device=device)
     
-    tag = 'mlp'
+    tag = 'mlp_2'
     trainer.train(tag=tag)
     
     # predict
@@ -57,4 +57,4 @@ def test_train_mlp() -> None:
               'imgs/pattern_recognition/101.png'
               ]
     for image in images:
-        cifar10_predict(model=pretrained_model, device=device, transform=transform, path=image)
+        cifar10_predict(model=pretrained_model, device=device, path=image)

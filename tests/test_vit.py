@@ -140,7 +140,7 @@ def test_train_vit_classifier() -> None:
                               output_size=output_size)
 
     lr: float = 0.1
-    num_epochs = 0
+    num_epochs = 100
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     # scheduler is better than Adam
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -161,7 +161,7 @@ def test_train_vit_classifier() -> None:
                         scheduler=scheduler,
                         device=device)
 
-    tag = 'vit3'
+    tag = 'vit4'
     trainer.train(tag=tag)
     
     # predict
