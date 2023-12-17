@@ -5,7 +5,7 @@
 import matplotlib.pyplot as plt
 import os.path
 import torch
-from torch import device, Tensor
+from torch import device, Tensor, nn
 import random
 
 
@@ -50,3 +50,45 @@ def top5_error_rate(logits: Tensor, labels: Tensor):
     # correct = torch.any(top5_labels.T == labels, dim=0).sum().item()
     # return batch_size - correct
     return torch.all(top5_labels.T != labels, dim=0).sum().item()
+
+activation = {}
+def get_activation(name):
+    # https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_forward_hook
+    def hook(model, input, output):
+        # https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html
+        # Returns a new Tensor, detached from the current graph.
+        # Returned Tensor shares the same storage with the original one. In-place modifications on either of them will be seen, and may trigger errors in correctness checks.
+        activation[name] = output.detach().clone()
+    return hook
+
+def get_intermediate_output(model, layer_name):
+    intermediate_output = {}
+    getattr(model, layer_name).register_forward_hook(get_activation(layer_name))
+    # do model forward
+    # then get the model intermediate output
+    return activation[layer_name]
+
+class IntermediateOutputHook:
+    def __init__(self):
+        pass
+        
+    def __call__(self, model, input, output):
+        self.output = output.detach().clone()
+
+
+class RegisterIntermediateOutputHook:
+    def __init__(self, model: nn.Module, layers: list[str]):
+        self.model = model
+        self.layers = layers
+        self.hooks = {}
+        self.handles = []
+        for layer in layers:
+            self.hooks[layer] = IntermediateOutputHook()
+            self.handles.append(getattr(model, layer).register_forward_hook(self.hooks[layer]))
+    
+    def get_intermediate_output(self) -> dict[str, Tensor]:
+        return {layer: self.hooks[layer].output for layer in self.layers}
+
+    def __del__(self):
+        for handle in self.handles:
+            handle.remove()

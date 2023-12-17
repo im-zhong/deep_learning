@@ -46,6 +46,7 @@ My Deep Learning Codes.
 4. jupyter notebook对git非常不友好 垃圾格式 不用了 不要再用了 球球了 全是错误 不会自动加载新代码
 5. start tensorboard: `conda deactivate` back to base env; then `tmux`; then `conda activate ml`;
    then `tensorboard --logdir=runs --bind_all`; then `ctrl+b d` to detach the tmux session
+6. 模型中的所有层都要有一个名字，这样方便对模型进行分析
 
 ## packages
 

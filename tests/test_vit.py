@@ -143,13 +143,9 @@ def test_train_vit_classifier() -> None:
     num_epochs = 100
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     # scheduler is better than Adam
-
-    scheduler1 = torch.optim.lr_scheduler.LinearLR(optimizer=optimizer, total_iters=10)
-    scheduler2 = torch.optim.lr_scheduler.CosineAnnealingLR(
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer=optimizer, T_max=num_epochs)
-    scheduler = torch.optim.lr_scheduler.SequentialLR(optimizer=optimizer, schedulers=[scheduler1, scheduler2])
 
-    
     device = utils.get_device()
     batch_size = 128
     num_workers = 16
