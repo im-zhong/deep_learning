@@ -23,6 +23,7 @@ My Deep Learning Codes.
 - [x] 修改模型保存时json文件的loss计算方式，应该保存平均的而不是全部的和，accuracy换成error rate 这样所有的曲线就都是下降的了
 - [x] 实现TOP-1 TOP-5 error rate on TrainerV2
 - [x] 实现WarmUpCosine Learning Scheduler
+- [ ] 神经网络的每一层都要有名字，但是有一些网络的层我们是用sequential或者其他自己实现的module实现的，这些东西能有自己的名字吗？
 
 ## DataMining Ideas
 1. 根据AlexNet和ResNet在做一个数据集的分类，数据处理，实现，调参都可以参考他们
