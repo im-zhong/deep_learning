@@ -48,6 +48,7 @@ My Deep Learning Codes.
 5. start tensorboard: `conda deactivate` back to base env; then `tmux`; then `conda activate ml`;
    then `tensorboard --logdir=runs --bind_all`; then `ctrl+b d` to detach the tmux session
 6. 模型中的所有层都要有一个名字，这样方便对模型进行分析
+7. 直接连接得到的向量不适合作为输出层的输入，最好在接一个隐藏层，多做一层的映射
 
 ## packages
 

@@ -7,7 +7,7 @@ import os.path
 import torch
 from torch import device, Tensor, nn
 import random
-
+from tsnecuda import TSNE
 
 def mysavefig(filename: str) -> None:
     os.makedirs(name='imgs', exist_ok=True)
@@ -75,6 +75,11 @@ class IntermediateOutputHook:
     def __call__(self, model, input, output):
         self.output = output.detach().clone()
 
+def get_nested_attr(obj, attr_path: str):
+    attrs = attr_path.split('.')
+    for attr in attrs:
+        obj = getattr(obj, attr)
+    return obj
 
 class RegisterIntermediateOutputHook:
     def __init__(self, model: nn.Module, layers: list[str]):
@@ -84,7 +89,7 @@ class RegisterIntermediateOutputHook:
         self.handles = []
         for layer in layers:
             self.hooks[layer] = IntermediateOutputHook()
-            self.handles.append(getattr(model, layer).register_forward_hook(self.hooks[layer]))
+            self.handles.append(get_nested_attr(model, layer).register_forward_hook(self.hooks[layer]))
     
     def get_intermediate_output(self) -> dict[str, Tensor]:
         return {layer: self.hooks[layer].output for layer in self.layers}
@@ -92,3 +97,24 @@ class RegisterIntermediateOutputHook:
     def __del__(self):
         for handle in self.handles:
             handle.remove()
+
+def draw_tsne(data: Tensor, labels: Tensor, name: str | None = None):
+    data = data.cpu().flatten(start_dim=1)
+    batch_size, feature_size = data.shape
+    assert len(labels.shape) == 1
+    assert labels.shape[0] == batch_size
+    
+    # 原来t-SNE每次的输出是随机的
+    tsne = TSNE(n_components=2, perplexity=15, learning_rate=10).fit_transform(data)
+    figure, ax = plt.subplots()
+    # https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.scatter.html
+    # https://matplotlib.org/stable/gallery/color/colormap_reference.html
+    scatter = ax.scatter(tsne[:, 0], tsne[:, 1], s=1, c=labels, cmap='tab10')
+    # https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.set_xticks.html#matplotlib.axes.Axes.set_xticks
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.legend(*scatter.legend_elements())
+    if name is not None:
+        mysavefig(name)
+    else:
+        plt.show()

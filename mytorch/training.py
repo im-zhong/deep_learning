@@ -424,6 +424,7 @@ class TrainerV2:
 
             # write training result to tensorboard
             tag_scalar_dict = {
+                'epoch': epoch,
                 'train_loss': train_loss,
                 'val_loss': val_loss,
                 'test_loss': test_loss,

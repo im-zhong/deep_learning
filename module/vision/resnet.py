@@ -4,6 +4,7 @@
 
 from torch import nn, Tensor
 import torch
+from collections import OrderedDict
 
 
 class ResidualBlock(nn.Module):
@@ -132,17 +133,21 @@ class SmallResNet(nn.Module):
 
         # for block in blocks:
         #     print(block)
-        last = nn.Sequential(
-            nn.AdaptiveMaxPool2d(output_size=(1, 1)),
-            nn.Flatten(),
-            nn.LazyLinear(out_features=num_classes)
-        )
+        last = nn.Sequential(OrderedDict([
+            ('AdaptiveMaxPool2d', nn.AdaptiveMaxPool2d(output_size=(1, 1))),
+            ('Flatten', nn.Flatten()),
+            ('LazyLinear1', nn.LazyLinear(out_features=1024)),
+            ('BatchNorm', nn.LazyBatchNorm1d()),
+            ('ReLU', nn.ReLU()),
+            # ('Dropout', nn.Dropout(p=0.01)),
+            ('LazyLinear2', nn.LazyLinear(out_features=num_classes))
+        ]))
 
-        self.net = nn.Sequential(
-            block1,
-            *blocks,
-            last
-        )
+        self.net = nn.Sequential(OrderedDict([
+            ('block1', block1),
+            *[('ResNetBlock', block) for block in blocks],
+            ('last', last)
+        ]))
 
     def forward(self, input: Tensor) -> Tensor:
         return self.net(input)
