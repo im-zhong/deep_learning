@@ -24,6 +24,7 @@ def test_wikitext2() -> None:
         examples: WikiText2Example
         labels: Tensor
         examples, labels = batch
+        print(labels)
         # print(examples.sentences.shape)
         # print(examples.segments.shape)
         # print(labels.shape)

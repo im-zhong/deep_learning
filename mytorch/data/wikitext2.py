@@ -89,6 +89,8 @@ class DynamicPadding:
                                 segments=padded_segments,
                                 mask=mask), tlabels
 
+# TODO: 限制maxlen 否则容易在训练的时候崩溃
+
 
 class WikiText2(Dataset):
     def __init__(self, root: str, split: str, num_workers: int = 0):
@@ -155,6 +157,7 @@ class WikiText2(Dataset):
                 next_sentence = paragraph[i + 1]
                 sentence, next_sentence, label = self.gen_next_sentence(
                     sentence, next_sentence, paragraphs)
+
                 nsp.append((sentence, next_sentence, label))
         return nsp
 

@@ -68,7 +68,7 @@ class TransformerEncoderBlock(nn.Module):
         super().__init__()
         # https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html
         self.attention = nn.MultiheadAttention(
-            embed_dim=hidden_size, num_heads=num_head, batch_first=True)
+            embed_dim=hidden_size, num_heads=num_head, batch_first=True, dropout=0.2)
         # 因为LayerNorm里面有参数 所以必须有两个不同的add norm
         self.add_norm1 = AddNorm(feature_size=hidden_size)
         self.ffn = FeedForwardNetwork(
@@ -109,10 +109,39 @@ class BERTEncoder(nn.Module):
         return self.net(x)
 
 
+class BERTEncoderV2(nn.Module):
+    def __init__(self, num_head: int, hidden_size: int, ffn_hidden_size: int, num_blocks: int):
+        # 不对，不能直接用Encoder，因为我们有自己的Embedding
+        # 那就用一系列的Block就行了
+        # Dictionary that remembers insertion order
+        super().__init__()
+        blocks: OrderedDict[str, nn.Module] = OrderedDict()
+        # https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html
+        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_size, nhead=num_head,
+                                                   dim_feedforward=ffn_hidden_size,
+                                                   dropout=0.1, batch_first=True)
+        # for i in range(num_blocks):
+        #     blocks[f'block{i}'] = nn.TransformerEncoder(
+        #         num_head=num_head, hidden_size=hidden_size, ffn_hidden_size=ffn_hidden_size)
+        # self.net = nn.Sequential(blocks)
+        self.encoder = nn.TransformerEncoder(
+            encoder_layer=encoder_layer, num_layers=num_blocks)
+
+    def forward(self, x: tuple[Tensor, Tensor]):
+        input, mask = x
+        return self.encoder(input, src_key_padding_mask=mask)
+
+
 class NextSentencePrediction(nn.Module):
     def __init__(self):
         super().__init__()
-        self.linear = nn.LazyLinear(out_features=2)
+        self.net = nn.Sequential(
+            nn.LazyLinear(out_features=1024),
+            nn.LazyBatchNorm1d(),
+            nn.ReLU(),
+            nn.LazyLinear(2)
+        )
+        # self.linear = nn.LazyLinear(out_features=2)
 
     def forward(self, x: tuple[Tensor, Tensor]):
         outputs, _ = x
@@ -120,7 +149,27 @@ class NextSentencePrediction(nn.Module):
         # get <cls>
         clss = outputs[:, 0, :].flatten(start_dim=1)
         assert clss.shape == (batch_size, hidden_size)
-        return self.linear(clss)
+        return self.net(clss)
+
+
+class NextSentencePredictionV2(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.LazyLinear(out_features=1024),
+            nn.LazyBatchNorm1d(),
+            nn.ReLU(),
+            nn.LazyLinear(2)
+        )
+        # self.linear = nn.LazyLinear(out_features=2)
+
+    def forward(self, x: Tensor):
+        outputs = x
+        batch_size, seq_size, hidden_size = outputs.shape
+        # get <cls>
+        clss = outputs[:, 0, :].flatten(start_dim=1)
+        assert clss.shape == (batch_size, hidden_size)
+        return self.net(clss)
 
 # TODO: MaskedLanguageModel
 
@@ -130,17 +179,39 @@ class BERT(nn.Module):
                  num_head: int, ffn_hidden_size: int, num_blocks: int):
         super().__init__()
         # 1. Embedding
-        self.embedding = BERTEmbedding(
+        embedding = BERTEmbedding(
             vocab_size=vocab_size, hidden_size=hidden_size, max_len=max_len)
         # 2. BERTEncoder
-        self.encoder = BERTEncoder(num_head=num_head, hidden_size=hidden_size,
-                                   ffn_hidden_size=ffn_hidden_size, num_blocks=num_blocks)
+        encoder = BERTEncoder(num_head=num_head, hidden_size=hidden_size,
+                              ffn_hidden_size=ffn_hidden_size, num_blocks=num_blocks)
         # 3. NextSentencePrediction + MaskedLanguageModel
-        self.nsp = NextSentencePrediction()
+        nsp = NextSentencePrediction()
         self.net = nn.Sequential(OrderedDict([
-            ('embedding', self.embedding),
-            ('encoder', self.encoder),
-            ('nsp', self.nsp)
+            ('embedding', embedding),
+            ('encoder', encoder),
+            ('nsp', nsp)
+        ]))
+
+    def forward(self, x: WikiText2Example):
+        return self.net(x)
+
+
+class BERTV2(nn.Module):
+    def __init__(self, vocab_size: int, hidden_size: int, max_len: int,
+                 num_head: int, ffn_hidden_size: int, num_blocks: int):
+        super().__init__()
+        # 1. Embedding
+        embedding = BERTEmbedding(
+            vocab_size=vocab_size, hidden_size=hidden_size, max_len=max_len)
+        # 2. BERTEncoder
+        encoder = BERTEncoderV2(num_head=num_head, hidden_size=hidden_size,
+                                ffn_hidden_size=ffn_hidden_size, num_blocks=num_blocks)
+        # 3. NextSentencePrediction + MaskedLanguageModel
+        nsp = NextSentencePredictionV2()
+        self.net = nn.Sequential(OrderedDict([
+            ('embedding', embedding),
+            ('encoder', encoder),
+            ('nsp', nsp)
         ]))
 
     def forward(self, x: WikiText2Example):
