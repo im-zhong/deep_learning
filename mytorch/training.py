@@ -338,8 +338,6 @@ class TrainerV2:
         top5_errors = utils.top5_error_rate(logits=logits, labels=labels)
         return int(top1_errors), int(top5_errors), batch_size
 
-
-
     def train_epoch(self, dataloader: DataLoader) -> float:
         # set to training mode
         self.model.train()
@@ -400,18 +398,20 @@ class TrainerV2:
                 # calculate accuracy, only for cross entropy loss, classification
                 accuracy_batch, num_batch = self.accuracy_batch(
                     logits=y_hat, labels=y)
-                top1_errors_batch, top5_errors_batch, _ = self.error_rate_batch(logits=y_hat, labels=y)
+                top1_errors_batch, top5_errors_batch, _ = self.error_rate_batch(
+                    logits=y_hat, labels=y)
                 accuracy += accuracy_batch
                 top1_errors += top1_errors_batch
                 top5_errors += top5_errors_batch
                 num_examples += num_batch
         return float(val_loss / len(dataloader)), float(accuracy) / float(num_examples), float(top1_errors) / float(num_examples), float(top5_errors) / float(num_examples)
 
-    def train(self, tag: str) -> None:
+    def train(self, tag: str, summary: bool = True) -> None:
         # 1. 判断 snapshots/{tag} 文件夹是否存在，如果不存在则创建
         path = self.folder_path(tag=tag)
         os.makedirs(name=path, exist_ok=True)
-        self.summary(tag=tag)
+        if summary:
+            self.summary(tag=tag)
 
         self.model = self.load_model(tag=tag)
         # send model parameters to device
@@ -419,8 +419,10 @@ class TrainerV2:
 
         for epoch in range(self.num_epochs):
             train_loss = self.train_epoch(self.train_dataloader)
-            val_loss, val_accuracy, val_top1_error_rate, val_top5_error_rate = self.eval_epoch(self.val_dataloader)
-            test_loss, test_accuracy, test_top1_error_rate, test_top5_error_rate = self.eval_epoch(self.test_dataloader)
+            val_loss, val_accuracy, val_top1_error_rate, val_top5_error_rate = self.eval_epoch(
+                self.val_dataloader)
+            test_loss, test_accuracy, test_top1_error_rate, test_top5_error_rate = self.eval_epoch(
+                self.test_dataloader)
 
             # write training result to tensorboard
             tag_scalar_dict = {
@@ -433,7 +435,7 @@ class TrainerV2:
                 'val_top1_error_rate': val_top1_error_rate,
                 'val_top5_error_rate': val_top5_error_rate,
                 'test_top1_error_rate': test_top1_error_rate,
-                'test_top5_error_rate': test_top5_error_rate    
+                'test_top5_error_rate': test_top5_error_rate
             }
             self.writer.add_scalars(
                 main_tag=tag, tag_scalar_dict=tag_scalar_dict, global_step=epoch)

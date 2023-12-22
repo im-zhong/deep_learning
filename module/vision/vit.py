@@ -12,7 +12,8 @@ class PatchEmbedding(nn.Module):
         self.hidden_size = hidden_size
         self.kernel_size = kernel_size
         self.stride = stride
-        self.conv = nn.LazyConv2d(out_channels=hidden_size, kernel_size=kernel_size, stride=stride)
+        self.conv = nn.LazyConv2d(
+            out_channels=hidden_size, kernel_size=kernel_size, stride=stride)
 
     def forward(self, images: Tensor):
         return self.conv(images).flatten(start_dim=2).transpose(1, 2)
@@ -23,7 +24,8 @@ class PositionalEmbedding(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
         self.max_len = max_len
-        self.positional_embedding = nn.Parameter(torch.randn(size=(1, max_len, hidden_size)))
+        self.positional_embedding = nn.Parameter(
+            torch.randn(size=(1, max_len, hidden_size)))
 
     def forward(self, inputs: Tensor) -> Tensor:
         # inputs.shape = (b, s, h)
@@ -61,7 +63,8 @@ class ViTBlock(nn.Module):
                                                batch_first=True)
         self.ln2 = nn.LayerNorm(normalized_shape=hidden_size)
         # TODO: maybe choose another hyper-parameters
-        self.mlp = ViTMLP(hidden_size=mlp_hidden_size, output_size=hidden_size, dropout=dropout)
+        self.mlp = ViTMLP(hidden_size=mlp_hidden_size,
+                          output_size=hidden_size, dropout=dropout)
 
     def forward(self, inputs: Tensor):
         # residual connections 1: multihead attention

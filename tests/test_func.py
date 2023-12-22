@@ -250,3 +250,21 @@ def test_avg_pool2d():
 
     output = func.avg_pool2d(input=input, kernel_size=2, padding=0, stride=1)
     assert torch.all(output == ground_truth)
+
+
+def test_make_repeat_valid_lens():
+    valid_lens = torch.tensor([1, 2, 3, 4])
+    seq_size = 4
+
+
+def test_make_key_padding_mask():
+    valid_lens = torch.tensor([1, 2, 3, 4])
+    seq_size = 4
+    mask = func.make_key_padding_mask(valid_lens=valid_lens, seq_size=seq_size)
+    ground_truth = torch.tensor([
+        [False, True, True, True],
+        [False, False, True, True],
+        [False, False, False, True],
+        [False, False, False, False],
+    ])
+    assert torch.all(mask == ground_truth)

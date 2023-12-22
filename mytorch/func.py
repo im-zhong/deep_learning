@@ -35,7 +35,8 @@ def one_hot(input: Tensor, num_classes: int = -1) -> Tensor:
         input=input) and not torch.is_complex(input=input)
 
     shape = input.shape
-    num_classes = num_classes if num_classes != -1 else int(torch.max(input)) + 1
+    num_classes = num_classes if num_classes != - \
+        1 else int(torch.max(input)) + 1
     result = torch.zeros(size=(*input.shape, num_classes), dtype=torch.long, device=input.device
                          ).reshape(shape=(-1, num_classes))
     # 我们遍历result的最后一个维度
@@ -220,6 +221,18 @@ def make_target_valid_lens(batch_size: int, max_len: int, device) -> Tensor:
         batch_size, 1)
     assert target_valid_lens.shape == (batch_size, max_len)
     return target_valid_lens
+
+
+def make_key_padding_mask(valid_lens: Tensor, seq_size: int) -> Tensor:
+    assert (len(valid_lens.shape) == 1)
+    valid_lens = valid_lens.repeat_interleave(seq_size).reshape(-1, seq_size)
+    batch_size, _ = valid_lens.shape
+
+    mask = torch.arange(end=seq_size, device=valid_lens.device).reshape(
+        1, -1).repeat(batch_size, 1)
+    assert mask.shape == (batch_size, seq_size)
+    mask = mask >= valid_lens
+    return mask
 
 
 def make_tuple(x: int | tuple[int, int]) -> tuple[int, int]:

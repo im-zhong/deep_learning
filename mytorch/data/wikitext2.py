@@ -9,6 +9,7 @@ import os
 import random
 from mytorch.data.seq import VocabularyV3
 from dataclasses import dataclass
+from mytorch import func
 
 
 # TODO: 这个函数应该放到 func.py 里面
@@ -27,7 +28,12 @@ class WikiText2Item:
 class WikiText2Example:
     sentences: Tensor
     segments: Tensor
-    valid_lens: Tensor
+    mask: Tensor
+
+    def to(self, device: torch.device) -> 'WikiText2Example':
+        return WikiText2Example(sentences=self.sentences.to(device),
+                                segments=self.segments.to(device),
+                                mask=self.mask.to(device))
 
 
 # 应该在这里返回valid_lens
@@ -75,9 +81,13 @@ class DynamicPadding:
         assert padded_sentences.shape[0] == tlabels.shape[0]
         # 这里必须返回一对数据 (x, y)
         # 而且x也应该用dataclass包装起来
+        # 从valid_lens生成mask
+        batch_size, seq_size = padded_segments.shape
+        mask = func.make_key_padding_mask(
+            valid_lens=valid_lens, seq_size=seq_size)
         return WikiText2Example(sentences=padded_sentences,
                                 segments=padded_segments,
-                                valid_lens=valid_lens), tlabels
+                                mask=mask), tlabels
 
 
 class WikiText2(Dataset):

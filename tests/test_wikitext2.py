@@ -33,6 +33,7 @@ def test_wikitext2() -> None:
         # print(labels)
         # valid_lens should be zero
         # 我知道了，最后一个batch的数据长度可能不足batch_size
-        for i in range(len(labels)):
-            assert torch.all(
-                examples.sentences[i, examples.valid_lens[i]:] == 0)
+        # for i in range(len(labels)):
+        #     assert torch.all(
+        #         examples.sentences[i, examples.valid_lens[i]:] == 0)
+        assert torch.all(examples.sentences[examples.mask] == 0)
