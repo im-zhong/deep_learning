@@ -4,12 +4,80 @@
 
 import torch
 from torch import nn, Tensor
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import os
 import random
+from mytorch.data.seq import VocabularyV3
+from dataclasses import dataclass
 
-# TODO: 为了做tokennize，数据库本身必须提供copurs
-# 但是这样这个类的职责太多了，Copurs由另外一个类来提供
+
+# TODO: 这个函数应该放到 func.py 里面
+# 重构dynamic padding
+
+
+@dataclass
+class WikiText2Item:
+    sentence: list[int]
+    segment: list[int]
+    label: bool
+
+
+# TODO: 想一个更贴切的名字 example, observation, instance, sample, feature,
+@dataclass
+class WikiText2Example:
+    sentences: Tensor
+    segments: Tensor
+    valid_lens: Tensor
+
+
+# 应该在这里返回valid_lens
+def dynamic_padding(seqs: list[list[int]],  max_len: int, pad: int) -> tuple[Tensor, Tensor]:
+    max_len = min(max_len, max([len(seq) for seq in seqs]))
+    valid_lens = [len(seq) if len(seq) < max_len else max_len
+                  for seq in seqs]
+    aligned_seqs = [seq[:max_len] if len(seq) > max_len
+                    else seq + [pad]*(max_len-len(seq))
+                    for seq in seqs]
+
+    for seq in aligned_seqs:
+        assert len(seq) == max_len
+    assert len(valid_lens) == len(aligned_seqs)
+    return torch.tensor(aligned_seqs, dtype=torch.long), torch.tensor(valid_lens, dtype=torch.long)
+
+
+class DynamicPadding:
+    def __init__(self, vocabulary: VocabularyV3, max_len: int):
+        self.vocabulary = vocabulary
+        self.max_len = max_len
+        self.segment_vocabulary = VocabularyV3(
+            text='', reversed_tokens=['<tmp>', '<pad>'], min_frequency=0)
+
+    # TODO: 还缺一个东西，valid_lens
+    # 我懂了，collate_fn的输出是整个dataset的输出 也就是一个tuple
+    def __call__(self, batch: list[WikiText2Item]) -> tuple[WikiText2Example, Tensor]:
+        # 你觉得这样的代码写出来看得懂吗？
+        # 你怎么能直到0是哪个1是哪个？万一后面咱们调换了顺序 换了名字 加了东西
+        # 你要怎么改？
+        # what we should do is 用一个结构体把dataset的返回类型给包装起来
+        # 应该用python的 dataclass
+        sentences: list[list[int]] = [item.sentence for item in batch]
+        segments: list[list[int]] = [item.segment for item in batch]
+        labels: list[bool] = [item.label for item in batch]
+        padded_sentences, valid_lens = dynamic_padding(seqs=sentences, max_len=self.max_len,
+                                                       pad=self.vocabulary.pad())
+        padded_segments, _ = dynamic_padding(seqs=segments, max_len=self.max_len,
+                                             pad=self.segment_vocabulary.pad())
+        # 两者的shape必须一致
+        assert padded_sentences.shape == padded_segments.shape
+        # change labels to tensor
+        tlabels = torch.tensor(labels, dtype=torch.long)
+        # 在返回数据之前尽可能检查数据的正确性
+        assert padded_sentences.shape[0] == tlabels.shape[0]
+        # 这里必须返回一对数据 (x, y)
+        # 而且x也应该用dataclass包装起来
+        return WikiText2Example(sentences=padded_sentences,
+                                segments=padded_segments,
+                                valid_lens=valid_lens), tlabels
 
 
 class WikiText2(Dataset):
@@ -23,17 +91,34 @@ class WikiText2(Dataset):
         self.nsp_examples, self.nsp_labels = self.add_segment_and_make_token(
             nsp)
 
-    def __getitem__(self, index):
+        # make paragraphs to str
+        self.vocabulary = VocabularyV3(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
+                                       reversed_tokens=[
+                                           '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
+                                       min_frequency=5)
+
+    def __getitem__(self, index) -> WikiText2Item:
         # TODO: 需要转成Tensor吗？如果要转成Tensor就需要实现Vocabulary和tokenize
-        x = self.nsp_examples[index][0]
-        z = self.nsp_examples[index][1]
-        y = self.nsp_labels[index]
-        return x, z, y
+        sentence = self.nsp_examples[index][0]
+        # 我们需要在这里对x进行tokenize
+        sentence = self.vocabulary.tokenize(sentence)
+        segment = self.nsp_examples[index][1]
+        label = self.nsp_labels[index]
+        return WikiText2Item(sentence=sentence, segment=segment, label=label)
         # return self.nsp_examples[index], self.nsp_labels[index]
 
     def __len__(self) -> int:
         # The __len__ function returns the number of samples in our dataset.
         return len(self.nsp_examples)
+
+    # 我们让这个类可以直接返回dataloader 这样就更简单了
+    def get_dataloader(self, batch_size: int, shuffle: bool = False, num_workers: int = 0) -> DataLoader:
+        # 重点关注 data collator 因为我们需要指定dynamic padding
+        # !!! collate_fn的输入需要和datasets[indicies]的输出一致 然后collate_fn需要返回一系列tensor
+        # 作为整个dataloader的输出
+        return DataLoader(dataset=self, batch_size=batch_size, shuffle=shuffle,
+                          num_workers=num_workers,
+                          collate_fn=DynamicPadding(vocabulary=self.vocabulary, max_len=512))  # type: ignore
 
     def read_wiki(self, path: str) -> list[str]:
         with open(path, 'r') as f:

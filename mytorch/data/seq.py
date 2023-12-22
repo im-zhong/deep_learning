@@ -69,7 +69,7 @@ class TimeMachineDataset(data.DataManager):  # 继承DataModule蛋用没有
         with open(self.filename, encoding='utf-8') as f:
             self.raw_text = f.read()
         self.vocab = Vocabulary(self.raw_text)
-        self.tokens = self.vocab.tokens
+        self.tokens: list[str] = self.vocab.tokens
         self.corpus = self.vocab.build_corpus()
         self.initialized = False
 
@@ -424,3 +424,72 @@ class TranslationDataManager(data.DataManager):
     def get_val_dataset(self) -> data.Dataset:
         self.get_dataset()
         return self.val_dataset
+
+
+class VocabularyV3:
+    def __init__(self, text: str, reversed_tokens: list[str] = ['<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
+                 min_frequency: int = 5):
+        # self.text = text
+        # self.reversed_tokens = reversed_tokens
+        # self.min_frequency = min_frequency
+
+        # 统计词频
+        # 统计所有的token
+        tokens: dict[str, int] = {}
+        for token in text.split():
+            tokens[token] = tokens.get(token, 0) + 1
+
+        # filter by min_frequency
+        filtered_tokens = {
+            token for token, frequency in tokens.items()
+            if frequency >= min_frequency}
+
+        # 保证reversed_tokens都不在filtered_tokens中
+        for token in reversed_tokens:
+            if token in filtered_tokens:
+                filtered_tokens.remove(token)
+
+        # token -> index
+        self.index_to_token: list[str] = reversed_tokens + \
+            list(filtered_tokens)
+        self.token_to_index: dict[str, int] = {
+            token: index for index, token in enumerate(self.index_to_token)}
+
+    def to_token(self, index: int) -> str:
+        return self.index_to_token[index] if index < len(self.index_to_token) else '<unk>'
+
+    def to_index(self, token: str) -> int:
+        return self.token_to_index.get(token, self.unk())
+
+    def __len__(self):
+        return len(self.index_to_token)
+
+    def __getitem__(self, token: str):
+        return self.token_to_index[token]
+
+    def pad(self) -> int:
+        return self['<pad>']
+
+    def cls(self) -> int:
+        return self['<cls>']
+
+    def bos(self) -> int:
+        return self['<bos>']
+
+    def eos(self) -> int:
+        return self['<eos>']
+
+    def unk(self) -> int:
+        return self['<unk>']
+
+    def seq(self) -> int:
+        return self['<seq>']
+
+    # 因为不同的数据集的tokenize的逻辑不一样 所以这里仅仅提供最单一的职责
+    # 就是把传进来的token是变成indices
+    def tokenize(self, tokens: list[str]) -> list[int]:
+        return [self.to_index(token) for token in tokens]
+
+    # 当然还有tokenize的逆操作
+    def detokenize(self, indices: list[int]) -> list[str]:
+        return [self.to_token(index) for index in indices]
