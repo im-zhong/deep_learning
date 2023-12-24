@@ -23,6 +23,9 @@ from torch.utils.data import DataLoader
 import json
 import torchinfo
 from mytorch import utils
+from module.nlp.bert import BERTOutput
+from typing import Any
+from mytorch.data.wikitext2v2 import WikiText2Label
 
 
 # TODO: 我有一个想法，对于我们训练过程中的每一个中间过程都应该保存下来
@@ -316,7 +319,7 @@ class TrainerV2:
             text: list[dict] = [result.to_dict() for result in results]
             fp.write(json.dumps(obj=text, indent=4))
 
-    def accuracy_batch(self, logits: Tensor, labels: Tensor) -> tuple[int, int]:
+    def accuracy_batch(self, logits: Any, labels: Any) -> tuple[int, int]:
         '''
         logits: shape = (batch_size, num_labels)
         labels: shape = (batch_size,)
@@ -327,6 +330,29 @@ class TrainerV2:
         step 2: 然后和labels进行比较 predict_labels == labels
         为了最后计算的准确率，我们需要返回判断准确的样本的个数 最后由外部累计所有的batch的和，然后再计算准确率
         '''
+        # TODO: 都怪BERT bert一次训练有两个任务 所以理论上应该有两个accuracy
+        # 但是现在先不考虑这个了
+        # logits是什么
+        if isinstance(logits, BERTOutput):
+            mlm = logits.mlm
+            nsp = logits.nsp
+            mlm_mask = logits.mlm_mask
+            assert isinstance(labels, WikiText2Label)
+            mlm_labels = labels.mlm
+            nsp_accuracy, nsp_batch_size = self.accuracy_batch(
+                logits.nsp, labels.nsp)
+            # mlm_accuracy, mlm_batch_size = self.accuracy_batch(
+            #     logits.mlm, labels.mlm.flatten())
+            # 卧槽 太麻烦了 mlm的正确率还要剔除一部分元素
+            mlm_predict_labels = logits.mlm.argmax(dim=1)
+            mlm_batch_size, _ = logits.mlm.shape
+            mlm_accuracy = int(((mlm_predict_labels == labels.mlm.flatten()
+                                 ).int() * logits.mlm_mask.flatten()).sum())
+            mlm_batch_size = int(mlm_mask.sum())
+            return nsp_accuracy + mlm_accuracy, nsp_batch_size + mlm_batch_size
+
+        assert isinstance(logits, Tensor)
+        assert isinstance(labels, Tensor)
         predict_labels: Tensor = logits.argmax(dim=1)
         # torch.sum(): Returns the sum of all elements in the input tensor.
         batch_size, _ = logits.shape
@@ -398,11 +424,12 @@ class TrainerV2:
                 # calculate accuracy, only for cross entropy loss, classification
                 accuracy_batch, num_batch = self.accuracy_batch(
                     logits=y_hat, labels=y)
-                top1_errors_batch, top5_errors_batch, _ = self.error_rate_batch(
-                    logits=y_hat, labels=y)
+                # TODO: 有朝一日再打开 傻逼BERT啊
+                # top1_errors_batch, top5_errors_batch, _ = self.error_rate_batch(
+                #     logits=y_hat, labels=y)
                 accuracy += accuracy_batch
-                top1_errors += top1_errors_batch
-                top5_errors += top5_errors_batch
+                # top1_errors += top1_errors_batch
+                # top5_errors += top5_errors_batch
                 num_examples += num_batch
         return float(val_loss / len(dataloader)), float(accuracy) / float(num_examples), float(top1_errors) / float(num_examples), float(top5_errors) / float(num_examples)
 

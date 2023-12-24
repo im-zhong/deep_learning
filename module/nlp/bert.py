@@ -141,7 +141,7 @@ class NextSentencePrediction(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.LazyLinear(out_features=1024),
-            nn.LazyBatchNorm1d(),
+            nn.LayerNorm(normalized_shape=1024),
             nn.ReLU(),
             nn.LazyLinear(2)
         )
@@ -203,29 +203,6 @@ class BERTLoss(nn.modules.loss._Loss):
         mlm_mask = bert_output.mlm_mask.flatten()
         mlm_loss = self.unreduced_loss(mlm_output, mlm_labels) * mlm_mask
         return nsp_loss + mlm_loss.mean()
-
-
-class NextSentencePredictionV2(nn.Module):
-    def __init__(self, vocab_size: int):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.LazyLinear(out_features=1024),
-            nn.LayerNorm(normalized_shape=1024),
-            nn.ReLU(),
-            # 这里的输出大小好像是不固定的？不对 是vocab_size
-            nn.LazyLinear(vocab_size)
-        )
-        # self.linear = nn.LazyLinear(out_features=2)
-
-    def forward(self, x: Tensor):
-        outputs = x
-        batch_size, seq_size, hidden_size = outputs.shape
-        # get <cls>
-        clss = outputs[:, 0, :].flatten(start_dim=1)
-        assert clss.shape == (batch_size, hidden_size)
-        return self.net(clss)
-
-# TODO: MaskedLanguageModel
 
 
 class BERT(nn.Module):
