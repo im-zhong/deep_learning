@@ -1,7 +1,7 @@
 # 2023/12/21
 # zhangzhong
 
-from mytorch.data.wikitext2 import WikiText2, WikiText2Example
+from mytorch.data.wikitext2 import WikiText2, WikiText2Sample
 from torch.utils.data import DataLoader
 import torch
 from torch import Tensor
@@ -21,7 +21,7 @@ def test_wikitext2() -> None:
         # 所以为了和trainer保持一致，我们必须包装返回的batch
         # 只要我们的模型认识这种数据类型就可以了
         # 因为我们目前实现的都是 supervised learning, 所以必然返回一对数据
-        examples: WikiText2Example
+        examples: WikiText2Sample
         labels: Tensor
         examples, labels = batch
         print(labels)

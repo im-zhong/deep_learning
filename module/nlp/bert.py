@@ -4,7 +4,7 @@
 
 import torch
 from torch import nn, Tensor
-from mytorch.data.wikitext2 import WikiText2, WikiText2Example
+from mytorch.data.wikitext2 import WikiText2, WikiText2Sample
 from collections import OrderedDict
 from mytorch.net.transformer import AddNorm, FeedForwardNetwork
 
@@ -27,7 +27,7 @@ class BERTEmbedding(nn.Module):
         self.positional_embedding = nn.Parameter(
             data=torch.randn(size=(1, max_len, hidden_size)))
 
-    def forward(self, x: WikiText2Example) -> tuple[Tensor, Tensor]:
+    def forward(self, x: WikiText2Sample) -> tuple[Tensor, Tensor]:
         # check shape
         # result = token + segment + positional
         # sentences.shape = [batch_size, seq_size]
@@ -192,7 +192,7 @@ class BERT(nn.Module):
             ('nsp', nsp)
         ]))
 
-    def forward(self, x: WikiText2Example):
+    def forward(self, x: WikiText2Sample):
         return self.net(x)
 
 
@@ -214,5 +214,5 @@ class BERTV2(nn.Module):
             ('nsp', nsp)
         ]))
 
-    def forward(self, x: WikiText2Example):
+    def forward(self, x: WikiText2Sample):
         return self.net(x)

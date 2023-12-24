@@ -268,3 +268,17 @@ def test_make_key_padding_mask():
         [False, False, False, False],
     ])
     assert torch.all(mask == ground_truth)
+
+
+def test_make_padding_weight_mask():
+    valid_lens = torch.tensor([1, 2, 3, 4])
+    seq_size = 4
+    mask = func.make_padding_weight_mask(
+        valid_lens=valid_lens, seq_size=seq_size)
+    ground_truth = torch.tensor([
+        [1, 0, 0, 0],
+        [1, 1, 0, 0],
+        [1, 1, 1, 0],
+        [1, 1, 1, 1],
+    ])
+    assert torch.all(mask == ground_truth)

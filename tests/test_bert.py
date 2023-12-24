@@ -3,7 +3,7 @@
 
 import torch
 from torch import nn, Tensor
-from mytorch.data.wikitext2 import WikiText2, WikiText2Example
+from mytorch.data.wikitext2 import WikiText2, WikiText2Sample
 from mytorch.training import TrainerV2
 from module.nlp.bert import BERT, BERTV2
 from mytorch import utils

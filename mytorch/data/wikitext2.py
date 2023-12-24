@@ -25,15 +25,15 @@ class WikiText2Item:
 
 # TODO: 想一个更贴切的名字 example, observation, instance, sample, feature,
 @dataclass
-class WikiText2Example:
+class WikiText2Sample:
     sentences: Tensor
     segments: Tensor
     mask: Tensor
 
-    def to(self, device: torch.device) -> 'WikiText2Example':
-        return WikiText2Example(sentences=self.sentences.to(device),
-                                segments=self.segments.to(device),
-                                mask=self.mask.to(device))
+    def to(self, device: torch.device) -> 'WikiText2Sample':
+        return WikiText2Sample(sentences=self.sentences.to(device),
+                               segments=self.segments.to(device),
+                               mask=self.mask.to(device))
 
 
 # 应该在这里返回valid_lens
@@ -56,11 +56,12 @@ class DynamicPadding:
         self.vocabulary = vocabulary
         self.max_len = max_len
         self.segment_vocabulary = VocabularyV3(
-            text='', reversed_tokens=['<tmp>', '<pad>'], min_frequency=0)
+            # must give unk, 否则会报错
+            text='', reserved_tokens=['<tmp>', '<pad>', '<unk>'], min_frequency=0)
 
     # TODO: 还缺一个东西，valid_lens
     # 我懂了，collate_fn的输出是整个dataset的输出 也就是一个tuple
-    def __call__(self, batch: list[WikiText2Item]) -> tuple[WikiText2Example, Tensor]:
+    def __call__(self, batch: list[WikiText2Item]) -> tuple[WikiText2Sample, Tensor]:
         # 你觉得这样的代码写出来看得懂吗？
         # 你怎么能直到0是哪个1是哪个？万一后面咱们调换了顺序 换了名字 加了东西
         # 你要怎么改？
@@ -85,9 +86,9 @@ class DynamicPadding:
         batch_size, seq_size = padded_segments.shape
         mask = func.make_key_padding_mask(
             valid_lens=valid_lens, seq_size=seq_size)
-        return WikiText2Example(sentences=padded_sentences,
-                                segments=padded_segments,
-                                mask=mask), tlabels
+        return WikiText2Sample(sentences=padded_sentences,
+                               segments=padded_segments,
+                               mask=mask), tlabels
 
 # TODO: 限制maxlen 否则容易在训练的时候崩溃
 
@@ -105,7 +106,7 @@ class WikiText2(Dataset):
 
         # make paragraphs to str
         self.vocabulary = VocabularyV3(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
-                                       reversed_tokens=[
+                                       reserved_tokens=[
                                            '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
                                        min_frequency=5)
 

@@ -33,3 +33,13 @@ def test_translation():
         for line in label:
             for token in line:
                 assert 0 <= token < target_vocab_size
+
+
+def test_vocabulary():
+    vocabulary = seq.VocabularyV3(text='hello world', reserved_tokens=[
+                                  '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'], min_frequency=1)
+    print(len(vocabulary))
+    for token in vocabulary:
+        print(token)
+
+    print(vocabulary.to_index('hello'))

@@ -11,6 +11,7 @@ import torch.nn.functional as F
 # https://pytorch.org/docs/stable/tensors.html
 # LongTensor: dtype = 64bit signed integer
 from torch import Tensor
+from dataclasses import dataclass
 
 
 # Takes LongTensor with index values of shape (*) and returns a tensor of shape (*, num_classes)
@@ -233,6 +234,42 @@ def make_key_padding_mask(valid_lens: Tensor, seq_size: int) -> Tensor:
     assert mask.shape == (batch_size, seq_size)
     mask = mask >= valid_lens
     return mask
+
+
+def make_padding_weight_mask(valid_lens: Tensor, seq_size: int) -> Tensor:
+    mask = make_key_padding_mask(valid_lens=valid_lens, seq_size=seq_size)
+    return (~mask).float()
+
+
+@dataclass
+class PaddingResult:
+    padded_seqs: Tensor
+    padding_mask: Tensor
+    padding_weight_mask: Tensor
+
+
+def dynamic_padding(seqs: list[list[int]],  max_len: int, pad: int) -> PaddingResult:
+    max_len = min(max_len, max([len(seq) for seq in seqs]))
+    valid_lens = [len(seq) if len(seq) < max_len else max_len
+                  for seq in seqs]
+    aligned_seqs = [seq[:max_len] if len(seq) > max_len
+                    else seq + [pad]*(max_len-len(seq))
+                    for seq in seqs]
+
+    for seq in aligned_seqs:
+        assert len(seq) == max_len
+    assert len(valid_lens) == len(aligned_seqs)
+
+    # 还需要返回一个权重矩阵
+    # 这个权重矩阵的作用是告诉模型哪些是padding哪些不是padding
+    return PaddingResult(
+        padded_seqs=torch.tensor(aligned_seqs, dtype=torch.long),
+        padding_mask=make_key_padding_mask(valid_lens=torch.tensor(
+            valid_lens, dtype=torch.long), seq_size=max_len),
+        padding_weight_mask=make_padding_weight_mask(
+            valid_lens=torch.tensor(valid_lens, dtype=torch.long),
+            seq_size=max_len)
+    )
 
 
 def make_tuple(x: int | tuple[int, int]) -> tuple[int, int]:
