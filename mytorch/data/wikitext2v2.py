@@ -10,7 +10,7 @@ import random
 from mytorch.data.seq import VocabularyV3 as Vocabulary
 from dataclasses import dataclass
 from mytorch import func
-from func import PaddingResult  # type: ignore
+from mytorch.func import PaddingResult
 
 
 @dataclass
@@ -224,7 +224,7 @@ class DynamicPadding:
         self.vocabulary = vocabulary
         self.max_len = max_len
         self.segment_vocabulary = Vocabulary(
-            text='', reserved_tokens=['<tmp>', '<pad>'], min_frequency=0)
+            text='', reserved_tokens=['<tmp>', '<pad>', '<unk>'], min_frequency=0)
 
     # 我懂了，collate_fn的输出是整个dataset的输出 也就是一个tuple
     def __call__(self, batch: list[WikiText2Item]) -> tuple[WikiText2Sample, WikiText2Label]:
@@ -273,7 +273,7 @@ class DynamicPadding:
         ), WikiText2Label(nsp=nsp_labels, mlm=padded_mlm_labels.padded_seqs)
 
 
-class WikiText2V2(Dataset):
+class WikiText2(Dataset):
     def __init__(self, root: str, split: str, max_len: int):
         # data pipeline
         # 1. preprocessing
@@ -296,16 +296,16 @@ class WikiText2V2(Dataset):
         tokenizer = Tokenizer(vocabulary=self.vocabulary)
         self.items: list[WikiText2Item] = tokenizer(mlm_items=mlm_items)
 
-        def __len__(self) -> int:
-            return len(self.items)
+    def __len__(self) -> int:
+        return len(self.items)
 
-        def __getitem__(self, index) -> WikiText2Item:
-            # 在转成tokenize吧
-            # 但是不是在这里转 还是在数据处理哪里转
-            # len和getitem就只是简单的返回数据而已
-            return self.items[index]
+    def __getitem__(self, index) -> WikiText2Item:
+        # 在转成tokenize吧
+        # 但是不是在这里转 还是在数据处理哪里转
+        # len和getitem就只是简单的返回数据而已
+        return self.items[index]
 
-        def get_dataloader(self, batch_size: int, shuffle: bool = False, num_workers: int = 0) -> DataLoader:
-            return DataLoader(dataset=self, batch_size=batch_size, shuffle=shuffle,
-                              num_workers=num_workers,
-                              collate_fn=DynamicPadding(vocabulary=self.vocabulary, max_len=512))  # type: ignore
+    def get_dataloader(self, batch_size: int, shuffle: bool = False, num_workers: int = 0) -> DataLoader:
+        return DataLoader(dataset=self, batch_size=batch_size, shuffle=shuffle,
+                          num_workers=num_workers,
+                          collate_fn=DynamicPadding(vocabulary=self.vocabulary, max_len=512))  # type: ignore
