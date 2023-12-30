@@ -11,22 +11,21 @@ from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
 
 def test_train_bert() -> None:
-    batch_size = 128
+    batch_size = 512
     num_workers = 8
-    max_len = 256
+    max_len = 64
     wikitext2 = WikiText2(root='datasets/wikitext-2',
                           split='train', max_len=max_len)
     train_dataloader = wikitext2.get_dataloader(
         batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_dataloader = WikiText2(
-        root='datasets/wikitext-2', split='valid', max_len=max_len).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        root='datasets/wikitext-2', split='valid', max_len=max_len, vocabulary=wikitext2.vocabulary).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_dataloader = WikiText2(
-        root='datasets/wikitext-2', split='test', max_len=max_len).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        root='datasets/wikitext-2', split='test', max_len=max_len, vocabulary=wikitext2.vocabulary).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    hidden_size = 512
-
-    num_head = 16
-    ffn_hidden_size = 1024
+    hidden_size = 128
+    num_head = 2
+    ffn_hidden_size = 256
     num_blocks = 2
     model = BERT(
         vocab_size=len(wikitext2.vocabulary),
@@ -37,10 +36,10 @@ def test_train_bert() -> None:
         num_blocks=num_blocks
     )
 
-    lr: float = 0.1
+    lr: float = 0.01
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-    warmup_epochs = 10
-    num_epochs = 100
+    warmup_epochs = 5
+    num_epochs = 50
     scheduler = SequentialLR(
         optimizer=optimizer,
         schedulers=[
@@ -56,7 +55,8 @@ def test_train_bert() -> None:
         milestones=[warmup_epochs]
     )
 
-    device = utils.get_device()
+    # device = utils.get_device()
+    device = torch.device('cuda:1')
     trainer = TrainerV2(
         model=model,
         loss_fn=BERTLoss(),
@@ -65,8 +65,8 @@ def test_train_bert() -> None:
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         test_dataloader=test_dataloader,
-        scheduler=scheduler,
+        # scheduler=scheduler,
         device=device,
     )
 
-    trainer.train(tag='bert_1', summary=False)
+    trainer.train(tag='bert_2', summary=False)

@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from mytorch import func
 from mytorch.func import PaddingResult
 
+# CHECK: 所有的train valid test应该公用一个字典，所以tokenize应该发生在最后一步
+
 
 @dataclass
 class WikiText2Sample:
@@ -274,16 +276,19 @@ class DynamicPadding:
 
 
 class WikiText2(Dataset):
-    def __init__(self, root: str, split: str, max_len: int):
+    def __init__(self, root: str, split: str, max_len: int, vocabulary: Vocabulary = None):
         # data pipeline
         # 1. preprocessing
         preprocessing = Preprocessing()
         paragraphs: list[list[str]] = preprocessing(root=root, split=split)
         # 我们应该在这里单独构建这个vocabulary
-        self.vocabulary = Vocabulary(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
-                                     reserved_tokens=[
-            '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
-            min_frequency=5)
+        if vocabulary is not None:
+            self.vocabulary = vocabulary
+        else:
+            self.vocabulary = Vocabulary(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
+                                         reserved_tokens=[
+                '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
+                min_frequency=5)
         # 2. next sentence prediction
         nsp = NextSentencePrediction(max_len=max_len)
         nsp_items: list[NSPItem] = nsp(paragraphs=paragraphs)

@@ -24,8 +24,10 @@ My Deep Learning Codes.
 - [x] 实现TOP-1 TOP-5 error rate on TrainerV2
 - [x] 实现WarmUpCosine Learning Scheduler
 - [ ] 神经网络的每一层都要有名字，但是有一些网络的层我们是用sequential或者其他自己实现的module实现的，这些东西能有自己的名字吗？
-- [ ] 把MaskedLanguageModel实现一个吧，是现成两个是可以开关的方式，如果还是不行的，就调试一下书上的代码吧，看看到底是哪里出了问题
-- [ ] 额外实现一个BERTTrainer 主要是accuracy等等的计算和其他的模型太不一样了, 然后利用pytorch的DistributedDataParallel来实现并行训练
+- [x] 把MaskedLanguageModel实现一个吧，是现成两个是可以开关的方式，如果还是不行的，就调试一下书上的代码吧，看看到底是哪里出了问题
+- [ ] 额外实现一个BERTTrainer 主要是accuracy等等的计算和其他的模型太不一样了, 然后利用pytorch的DistributedDataParallel来实现并行训练, 不对 不应该重写，应该仔细思考不同的模型之间训练时的共同点和差异，比如这次是accuracy_batch和summary_write不同，那么我们应该提供一种方法 让不同的模型提供自己的方法 而其他的部分仍然复用 这才是最合理的方式
+- [ ] 重构WikiTextDataset，修复不同的数据集使用不同的字典的bug，优化流程
+- [ ] 增加训练集的accuracy的功能 更加全面的展示数据 更有助于分析模型和实现
 
 ## DataMining Ideas
 1. 根据AlexNet和ResNet在做一个数据集的分类，数据处理，实现，调参都可以参考他们

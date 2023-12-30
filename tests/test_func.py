@@ -258,9 +258,12 @@ def test_make_repeat_valid_lens():
 
 
 def test_make_key_padding_mask():
+    # https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html
     valid_lens = torch.tensor([1, 2, 3, 4])
     seq_size = 4
     mask = func.make_key_padding_mask(valid_lens=valid_lens, seq_size=seq_size)
+    # For a binary mask, a True value indicates that the corresponding key
+    # value will be ignored for the purpose of attention
     ground_truth = torch.tensor([
         [False, True, True, True],
         [False, False, True, True],

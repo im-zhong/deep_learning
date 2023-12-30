@@ -56,7 +56,7 @@ class BERTEmbedding(nn.Module):
             batch_size, seq_size, self.hidden_size)
 
         # positional embedding
-        assert seq_size < self.max_len
+        assert seq_size <= self.max_len
         embedding: Tensor = token_embedding + segment_embedding + \
             self.positional_embedding[:, :seq_size, :]
         assert embedding.shape == (batch_size, seq_size, self.hidden_size)
@@ -122,7 +122,7 @@ class BERTEncoderV2(nn.Module):
         # https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html
         encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_size, nhead=num_head,
                                                    dim_feedforward=ffn_hidden_size,
-                                                   dropout=0.1, batch_first=True)
+                                                   dropout=0.2, batch_first=True)
         # for i in range(num_blocks):
         #     blocks[f'block{i}'] = nn.TransformerEncoder(
         #         num_head=num_head, hidden_size=hidden_size, ffn_hidden_size=ffn_hidden_size)
@@ -140,9 +140,11 @@ class NextSentencePrediction(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.LazyLinear(out_features=1024),
-            nn.LayerNorm(normalized_shape=1024),
-            nn.ReLU(),
+            nn.LazyLinear(out_features=128),
+            nn.Tanh(),
+            # nn.ReLU(),
+            # nn.Dropout(p=0.2),
+            # nn.LayerNorm(normalized_shape=1024),
             nn.LazyLinear(2)
         )
         # self.linear = nn.LazyLinear(out_features=2)
@@ -160,11 +162,10 @@ class MaskedLanguageModel(nn.Module):
     def __init__(self, vocab_size: int):
         super().__init__()
         self.net = nn.Sequential(
-            nn.LazyLinear(out_features=1024),
-            # 或许应该用LayerNorm吧 在NLP问题上
-            # 但是LayzerNorm应该用在fc层前面还是后面？
-            nn.LayerNorm(normalized_shape=1024),
+            nn.LazyLinear(out_features=128),
             nn.ReLU(),
+            # nn.Dropout(p=0.2),
+            nn.LayerNorm(normalized_shape=128),
             nn.LazyLinear(vocab_size)
         )
         # self.linear = nn.LazyLinear(out_features=2)
@@ -202,7 +203,9 @@ class BERTLoss(nn.modules.loss._Loss):
         mlm_labels = labels.mlm.flatten()
         mlm_mask = bert_output.mlm_mask.flatten()
         mlm_loss = self.unreduced_loss(mlm_output, mlm_labels) * mlm_mask
-        return nsp_loss + mlm_loss.mean()
+        # BUG: mlm_loss不能直接用mean计算 因为有些地方的loss是不应该被计算进去的
+        # 直接用mean会导致计算出来的loss偏小
+        return nsp_loss + (mlm_loss.sum() / (mlm_mask.sum() + 1e-8))
 
 
 class BERT(nn.Module):

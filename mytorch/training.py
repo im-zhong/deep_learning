@@ -8,8 +8,6 @@
 
 
 from dataclasses import dataclass
-from unittest import result
-from sympy import S
 from tqdm import tqdm
 # import torch.utils.tensorboard as tb
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -239,6 +237,7 @@ class Result:
         return Result(**d)
 
 
+# TODO：改名为ClassificationTrainer
 class TrainerV2:
     '''
         only for pytorch's model, only for cross entropy
@@ -451,6 +450,7 @@ class TrainerV2:
             test_loss, test_accuracy, test_top1_error_rate, test_top5_error_rate = self.eval_epoch(
                 self.test_dataloader)
 
+            # TODO：为了更加通用，可以给没有返回值的默认为零，然后我们在add_scalars的时候在去掉这些零
             # write training result to tensorboard
             tag_scalar_dict = {
                 'epoch': epoch,
