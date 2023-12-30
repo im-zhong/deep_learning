@@ -2,12 +2,15 @@
 # zhangzhong
 # Pretrain BERT
 
+from typing import Any
 import torch
 from torch import nn, Tensor
 from mytorch.data.wikitext2v2 import WikiText2, WikiText2Sample, WikiText2Label
 from collections import OrderedDict
 from mytorch.net.transformer import AddNorm, FeedForwardNetwork
 from dataclasses import dataclass
+from mytorch.metrics import Metrics, Evaluator
+from mytorch import func, utils
 
 
 class BERTEmbedding(nn.Module):
@@ -185,16 +188,17 @@ class MaskedLanguageModel(nn.Module):
 class BERTOutput:
     nsp: Tensor
     mlm: Tensor
+    # TODO: mlm_mask应该放在Labels里面 因为forward全程没有用到这个东西
     mlm_mask: Tensor
 
 
-class BERTLoss(nn.modules.loss._Loss):
+class BERTLossImpl(nn.modules.loss._Loss):
     def __init__(self):
         super().__init__()
         self.loss = nn.CrossEntropyLoss()
         self.unreduced_loss = nn.CrossEntropyLoss(reduce=None)
 
-    def __call__(self, bert_output: BERTOutput, labels: WikiText2Label) -> Tensor:
+    def __call__(self, bert_output: BERTOutput, labels: WikiText2Label) -> tuple[Tensor, Tensor]:
         # nsp.shape = (batch_size, 2)
         nsp_loss = self.loss(bert_output.nsp, labels.nsp)
         # TODO: mlm loss
@@ -205,7 +209,93 @@ class BERTLoss(nn.modules.loss._Loss):
         mlm_loss = self.unreduced_loss(mlm_output, mlm_labels) * mlm_mask
         # BUG: mlm_loss不能直接用mean计算 因为有些地方的loss是不应该被计算进去的
         # 直接用mean会导致计算出来的loss偏小
-        return nsp_loss + (mlm_loss.sum() / (mlm_mask.sum() + 1e-8))
+        # return nsp_loss + (mlm_loss.sum() / (mlm_mask.sum() + 1e-8))
+        return nsp_loss, (mlm_loss.sum() / (mlm_mask.sum()))
+
+
+class BERTLoss(nn.modules.loss._Loss):
+    def __init__(self):
+        super().__init__()
+        self.loss = BERTLossImpl()
+
+    def __call__(self, bert_output: BERTOutput, labels: WikiText2Label) -> Tensor:
+        nsp_loss, mlm_loss = self.loss(bert_output, labels)
+        return nsp_loss + mlm_loss
+
+
+@dataclass
+class BERTMetrics(Metrics):
+    loss: float = 0.0
+    nsp_loss: float = 0.0
+    mlm_loss: float = 0.0
+    nsp_err: float = 0.0
+    mlm_top1_err: float = 0.0
+    mlm_top5_err: float = 0.0
+
+    def __lt__(self, other: "BERTMetrics") -> bool:
+        return self.nsp_err > other.nsp_err or self.mlm_top5_err > other.mlm_top5_err
+
+    def __gt__(self, other: "BERTMetrics") -> bool:
+        return self.nsp_err < other.nsp_err or self.mlm_top5_err < other.mlm_top5_err
+
+    def to_dict(self) -> dict:
+        return self.__dict__
+
+    @staticmethod
+    def from_dict(d: dict) -> "BERTMetrics":
+        return BERTMetrics(**d)
+
+
+class BERTEvaluator(Evaluator):
+    def __init__(self) -> None:
+        self.loss = BERTLossImpl()
+        self.nsp_losses: list[float] = []
+        self.mlm_losses: list[float] = []
+        self.nsp_errs: list[float] = []
+        self.mlm_top1_errs: list[float] = []
+        self.mlm_top5_errs: list[float] = []
+
+    def eval_batch(self, bert_output: BERTOutput, labels: WikiText2Label):
+        nsp_loss, mlm_loss = self.loss(bert_output, labels)
+        nsp_err = self.nsp_err_batch(bert_output, labels)
+        mlm_top1_err, mlm_top5_err = self.mlm_err_batch(bert_output, labels)
+        # 所有的这些中间结构都暂存起来 直到我们计算完整个epoch的时候再计算
+        self.nsp_losses.append(nsp_loss.item())
+        self.mlm_losses.append(mlm_loss.item())
+        self.nsp_errs.append(nsp_err)
+        self.mlm_top1_errs.append(mlm_top1_err)
+        self.mlm_top5_errs.append(mlm_top5_err)
+
+    def nsp_err_batch(self, bert_output: BERTOutput, labels: WikiText2Label) -> float:
+        return utils.topk_err(k=1, logits=bert_output.nsp, labels=labels.nsp)
+
+    def mlm_err_batch(self, bert_output: BERTOutput, labels: WikiText2Label) -> tuple[float, float]:
+        # top1 error rate
+        top1_err = utils.topk_err(k=1, logits=bert_output.mlm,
+                                  labels=labels.mlm.flatten(),
+                                  mask=bert_output.mlm_mask.flatten())
+        top5_err = utils.topk_err(k=5, logits=bert_output.mlm,
+                                  labels=labels.mlm.flatten(),
+                                  mask=bert_output.mlm_mask.flatten())
+        return top1_err, top5_err
+
+    def clear(self):
+        self.nsp_losses.clear()
+        self.mlm_losses.clear()
+        self.nsp_errs.clear()
+        self.mlm_top1_errs.clear()
+        self.mlm_top5_errs.clear()
+
+    def summary(self) -> BERTMetrics:
+        return BERTMetrics(
+            loss=sum(self.nsp_losses)/len(self.nsp_losses) +
+            sum(self.mlm_losses)/len(self.mlm_losses),
+            nsp_loss=sum(self.nsp_losses)/len(self.nsp_losses),
+            mlm_loss=sum(self.mlm_losses)/len(self.mlm_losses),
+            nsp_err=sum(self.nsp_errs)/len(self.nsp_errs),
+            mlm_top1_err=sum(self.mlm_top1_errs)/len(self.mlm_top1_errs),
+            mlm_top5_err=sum(self.mlm_top5_errs)/len(self.mlm_top5_errs)
+        )
 
 
 class BERT(nn.Module):

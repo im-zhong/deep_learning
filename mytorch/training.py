@@ -24,6 +24,7 @@ from mytorch import utils
 from module.nlp.bert import BERTOutput
 from typing import Any
 from mytorch.data.wikitext2v2 import WikiText2Label
+from mytorch.metrics import Evaluator, Metrics
 
 
 # TODO: 我有一个想法，对于我们训练过程中的每一个中间过程都应该保存下来
@@ -208,33 +209,51 @@ class Trainer:
 
 
 @dataclass
-class Result:
+class Result(Metrics):
     epoch: int = 0
-    train_loss: float = 0
-    val_loss: float = 0
-    val_accuracy: float = 0
-    test_loss: float = 0
-    test_accuracy: float = 0
-    val_top1_error_rate: float = 0
-    val_top5_error_rate: float = 0
-    test_top1_error_rate: float = 0
-    test_top5_error_rate: float = 0
+    train: Metrics = Metrics()
+    val: Metrics = Metrics()
+    test: Metrics = Metrics()
 
     def __lt__(self, other: "Result") -> bool:
-        return self.val_accuracy < other.val_accuracy and self.test_accuracy < other.test_accuracy
+        return self.val < other.val
 
     def __gt__(self, other: "Result") -> bool:
+        if type(self.val) != type(other.val):
+            return True
         # 我们是不应该通过test_accuracy来保存的 因为我们根本就不知道
         # 还有就是我们需要固定随机数种子 不然每次重新训练都会导致val_accuracy暴涨 这根本没有任何意义
         # return self.val_accuracy > other.val_accuracy or self.test_accuracy > other.test_accuracy
-        return self.val_accuracy > other.val_accuracy
+        return self.val > other.val
 
     def to_dict(self) -> dict:
-        return self.__dict__
+        # 现在这两个都需要特殊处理
+        # 因为summary不支持{}嵌套{}
+        # 所以我们必须把内层的{}展开
+        # 同样，再从dict转成result的时候 需要再转换成内层的{}
+        # return self.__dict__
+
+        # train: Metrics => train_
+        # 然后Metrics本身可以转成dict
+        result = {}
+        result['epoch'] = self.epoch
+        result.update(
+            {f'train_{k}': v for k, v in self.train.to_dict().items()})
+        result.update({f'val_{k}': v for k, v in self.val.to_dict().items()})
+        result.update({f'test_{k}': v for k, v in self.test.to_dict().items()})
+        return result
 
     @staticmethod
     def from_dict(d: dict) -> "Result":
-        return Result(**d)
+        result = Result()
+        result.epoch = d['epoch']
+        result.train.from_dict({k[6:]: v for k, v in d.items() if k.startswith(
+            'train_')})
+        result.val.from_dict({k[4:]: v for k, v in d.items() if k.startswith(
+            'val_')})
+        result.test.from_dict({k[5:]: v for k, v in d.items() if k.startswith(
+            'test_')})
+        return result
 
 
 # TODO：改名为ClassificationTrainer
@@ -345,6 +364,7 @@ class TrainerV2:
             # 卧槽 太麻烦了 mlm的正确率还要剔除一部分元素
             mlm_predict_labels = logits.mlm.argmax(dim=1)
             mlm_batch_size, _ = logits.mlm.shape
+            # TODO: 直接在二维上计算代码还可以再简单一点，参考李沐的实现
             mlm_accuracy = int(((mlm_predict_labels == labels.mlm.flatten()
                                  ).int() * logits.mlm_mask.flatten()).sum())
             mlm_batch_size = int(mlm_mask.sum())
@@ -445,6 +465,8 @@ class TrainerV2:
 
         for epoch in range(self.num_epochs):
             train_loss = self.train_epoch(self.train_dataloader)
+            _, train_accuracy, _, _ = self.eval_epoch(
+                dataloader=self.train_dataloader)
             val_loss, val_accuracy, val_top1_error_rate, val_top5_error_rate = self.eval_epoch(
                 self.val_dataloader)
             test_loss, test_accuracy, test_top1_error_rate, test_top5_error_rate = self.eval_epoch(
@@ -457,6 +479,7 @@ class TrainerV2:
                 'train_loss': train_loss,
                 'val_loss': val_loss,
                 'test_loss': test_loss,
+                'train_accuracy': train_accuracy,
                 'val_accuracy': val_accuracy,
                 'test_accuracy': test_accuracy,
                 'val_top1_error_rate': val_top1_error_rate,
@@ -469,4 +492,167 @@ class TrainerV2:
 
             # save model based on result
             result = Result.from_dict(d=tag_scalar_dict)
+            self.save_model(tag=tag, result=result)
+
+
+class TrainerV3:
+    '''
+        only for pytorch's model, only for cross entropy
+    '''
+
+    def __init__(self, *,
+                 model: Module,
+                 loss_fn: Module,
+                 optimizer: Optimizer,
+                 evaluator: Evaluator,
+                 num_epochs: int,
+                 train_dataloader: DataLoader,
+                 val_dataloader: DataLoader,
+                 test_dataloader: DataLoader,
+                 scheduler: LRScheduler | None = None,
+                 device: device = torch.device('cpu'),
+                 prefix: str = 'snapshots') -> None:
+        self.num_epochs = num_epochs
+        self.model = model
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.train_dataloader = train_dataloader
+        self.val_dataloader = val_dataloader
+        self.test_dataloader = test_dataloader
+        self.scheduler = scheduler
+        self.writer = SummaryWriter()
+        self.prefix = prefix
+        self.device = device
+        self.evaluator = evaluator
+
+    def summary(self, tag: str) -> None:
+        with open(file=self.summary_path(tag=tag), mode='w') as fp:
+            self.model.eval()
+            fp.write(str(self.model))
+            fp.write('\n\n')
+            x, _ = next(iter(self.train_dataloader))
+            stats = torchinfo.summary(
+                model=self.model, input_size=x.shape, device='cpu')
+            fp.write(str(stats))
+
+    def folder_path(self, tag: str) -> str:
+        return os.path.join(self.prefix, tag)
+
+    def model_path(self, tag: str) -> str:
+        return os.path.join(self.folder_path(tag=tag), f'{tag}.model')
+
+    def result_path(self, tag: str) -> str:
+        return os.path.join(self.folder_path(tag=tag), f'{tag}.json')
+
+    def summary_path(self, tag: str) -> str:
+        return os.path.join(self.folder_path(tag=tag), f'{tag}.summary')
+
+    def load_model(self, tag: str) -> nn.Module:
+        path = self.model_path(tag=tag)
+        return torch.load(path) if os.path.exists(path) else self.model
+
+    def save_model(self, tag: str, result: Result) -> None:
+        best_result = self.load_result(tag=tag)
+        if result > best_result:
+            self.save_result(tag=tag, result=result)
+            torch.save(obj=self.model, f=self.model_path(tag=tag))
+
+    def open_results(self, tag: str) -> list[Result]:
+        file = self.result_path(tag=tag)
+        results: list[Result] = []
+        if os.path.exists(file):
+            with open(file=file, mode='r') as fp:
+                for d in json.loads(s=fp.read()):
+                    results.append(Result.from_dict(d=d))
+        return results
+
+    def load_result(self, tag: str) -> Result:
+        results = self.open_results(tag=tag)
+        return Result() if len(results) == 0 else results[-1]
+
+    def save_result(self, tag: str, result: Result) -> None:
+        results = self.open_results(tag=tag)
+        results.append(result)
+        with open(file=self.result_path(tag=tag), mode='w') as fp:
+            text: list[dict] = [result.to_dict() for result in results]
+            fp.write(json.dumps(obj=text, indent=4))
+
+    def train_epoch(self, dataloader: DataLoader) -> float:
+        # set to training mode
+        self.model.train()
+        # computing the loss for every minibatch on the GPU and reporting it back to the usr on the command line
+        # or logging it in a NumPy array will trigger a global interpreter lock which stalls all GPUs
+        # so we need to compute and store the loss on GPU!
+        training_loss: Tensor = torch.tensor(
+            data=0, dtype=torch.float32, device=self.device)
+
+        x: Tensor
+        y: Tensor
+        for x, y in tqdm(dataloader):
+            # send data to device
+            x = x.to(device=self.device)
+            y = y.to(device=self.device)
+
+            # forward pass
+            y_hat: Tensor = self.model(x)
+            loss: Tensor = self.loss_fn(y_hat, y)
+            training_loss += loss
+            # Computes the gradient
+            loss.backward()
+
+            # Performs a single optimization step (parameter update).
+            self.optimizer.step()
+            # clear the gradients
+            self.optimizer.zero_grad()
+
+        # after every epoch, update the learning rate
+        if self.scheduler is not None:
+            self.scheduler.step()
+
+        return float(training_loss / len(dataloader))
+
+    def eval_epoch(self, dataloader: DataLoader) -> Metrics:
+        # set to evaluation mode
+        self.model.eval()
+        self.evaluator.clear()
+
+        # ugly type hint
+        x: Tensor
+        y: Tensor
+        for x, y in tqdm(dataloader):
+            x = x.to(device=self.device)
+            y = y.to(device=self.device)
+
+            # Disabling gradient calculation is useful for inference
+            with torch.no_grad():
+                y_hat: Tensor = self.model(x)
+                self.evaluator.eval_batch(y_hat, y)
+
+        return self.evaluator.summary()
+
+    def train(self, tag: str, summary: bool = True) -> None:
+        # 1. 判断 snapshots/{tag} 文件夹是否存在，如果不存在则创建
+        path = self.folder_path(tag=tag)
+        os.makedirs(name=path, exist_ok=True)
+        if summary:
+            self.summary(tag=tag)
+
+        self.model = self.load_model(tag=tag)
+        # send model parameters to device
+        self.model = self.model.to(self.device)
+
+        for epoch in range(self.num_epochs):
+            self.train_epoch(self.train_dataloader)
+            train_metrics = self.eval_epoch(self.train_dataloader)
+            val_metrics = self.eval_epoch(self.val_dataloader)
+            test_metrics = self.eval_epoch(self.test_dataloader)
+
+            # TODO：为了更加通用，可以给没有返回值的默认为零，然后我们在add_scalars的时候在去掉这些零
+            # write training result to tensorboard
+            result = Result(epoch=epoch, train=train_metrics,
+                            val=val_metrics, test=test_metrics)
+            self.writer.add_scalars(
+                main_tag=tag, tag_scalar_dict=result.to_dict(), global_step=epoch)
+
+            # save model based on result
             self.save_model(tag=tag, result=result)

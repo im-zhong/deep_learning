@@ -62,7 +62,10 @@ class WikiText2Label:
 # 因为真正的文件读取信息处理等等都是等到__call__的时候才会发生
 # 所以这些参数应该放在__call__里面
 # 而且既然我们做的是管线，那么最好前面的输出就是后面的输入
-class Preprocessing:
+class Preprocessor:
+    def __init__(self, root: str):
+        self.root = root
+
     def read_wiki(self, path: str) -> list[str]:
         with open(path, 'r') as f:
             # f.readlines() will read all lines and seperate them with '\n'
@@ -73,10 +76,10 @@ class Preprocessing:
         return [line.strip().lower().split(' . ')
                 for line in lines if len(line.split(' . ')) > 1]
 
-    def __call__(self, root: str, split: str) -> list[list[str]]:
+    def __call__(self, split: str) -> list[list[str]]:
         assert split in ["train", "valid", "test"]
         lines: list[str] = self.read_wiki(os.path.join(
-            root, f'wiki.{split}.tokens'))
+            self.root, f'wiki.{split}.tokens'))
         paragraphs: list[list[str]] = self.gen_paragraphs(lines)
         return paragraphs
 
@@ -276,19 +279,20 @@ class DynamicPadding:
 
 
 class WikiText2(Dataset):
-    def __init__(self, root: str, split: str, max_len: int, vocabulary: Vocabulary = None):
+    def __init__(self, paragraphs: list[list[str]], max_len: int, vocabulary: Vocabulary):
         # data pipeline
         # 1. preprocessing
-        preprocessing = Preprocessing()
-        paragraphs: list[list[str]] = preprocessing(root=root, split=split)
-        # 我们应该在这里单独构建这个vocabulary
-        if vocabulary is not None:
-            self.vocabulary = vocabulary
-        else:
-            self.vocabulary = Vocabulary(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
-                                         reserved_tokens=[
-                '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
-                min_frequency=5)
+        # preprocessing = Preprocessing()
+        # paragraphs: list[list[str]] = preprocessing(root=root, split=split)
+        # # 我们应该在这里单独构建这个vocabulary
+        # if vocabulary is not None:
+        #     self.vocabulary = vocabulary
+        # else:
+        #     self.vocabulary = Vocabulary(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
+        #                                  reserved_tokens=[
+        #         '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
+        #         min_frequency=5)
+        self.vocabulary = vocabulary
         # 2. next sentence prediction
         nsp = NextSentencePrediction(max_len=max_len)
         nsp_items: list[NSPItem] = nsp(paragraphs=paragraphs)

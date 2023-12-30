@@ -37,6 +37,7 @@ def top1_error_rate(logits: Tensor, labels: Tensor):
     return (predict_labels != labels).int().sum().item()
 
 
+# 还要加mask
 def top5_error_rate(logits: Tensor, labels: Tensor):
     # https://pytorch.org/docs/stable/generated/torch.topk.html
     # Returns the k largest elements of the given input tensor along a given dimension.
@@ -54,6 +55,28 @@ def top5_error_rate(logits: Tensor, labels: Tensor):
     # correct = torch.any(top5_labels.T == labels, dim=0).sum().item()
     # return batch_size - correct
     return torch.all(top5_labels.T != labels, dim=0).sum().item()
+
+# 如果可以实现一个topk方法 然后top1和top5可以复用就好了
+
+
+def topk_err(k: int, logits: Tensor, labels: Tensor, mask: Tensor | None = None) -> float:
+    batch_size, num_classes = logits.shape
+    if num_classes < k:
+        return 0
+
+    _, topk_labels = logits.topk(k=k, dim=1)
+    assert topk_labels.shape == (batch_size, k)
+    assert labels.shape == (batch_size,)
+
+    # acc = torch.any(topk_labels.T == labels, dim=0)
+    # err = torch.all(topk_labels.T != labels, dim=0)
+    # acc.shape = (batch_size,)
+    if mask is None:
+        mask = torch.ones(batch_size, device=logits.device)
+    assert mask.shape == (batch_size,)
+    err = torch.all(topk_labels.T != labels, dim=0)
+    err = (err*mask).sum() / (mask.sum())
+    return err.item()
 
 
 activation = {}
