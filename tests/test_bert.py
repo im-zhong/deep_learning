@@ -82,7 +82,7 @@ def test_train_bert() -> None:
 
 
 def test_train_bert_2() -> None:
-    batch_size = 512
+    batch_size = 192
     num_workers = 8
     max_len = 64
 
@@ -106,10 +106,10 @@ def test_train_bert_2() -> None:
         paragraphs=test_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
             batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    hidden_size = 512
-    num_head = 4
-    ffn_hidden_size = 1024
-    num_blocks = 8
+    hidden_size = 768
+    num_head = 12
+    ffn_hidden_size = 2048
+    num_blocks = 12
     model = BERT(
         vocab_size=len(vocabulary),
         hidden_size=hidden_size,
