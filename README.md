@@ -57,4 +57,5 @@ My Deep Learning Codes.
 ## packages
 
 1. pip install torch torchvision torchaudio
-2. pip install tensorboard numpy matplotlib tqdm pytest torchsummary ipykernel
+2. pip install tensorboard numpy matplotlib tqdm pytest torchsummary ipykernel tsnecuda SciPy
+3. TODO: 安装tsnecuda还挺麻烦的 需要装一些别的库 https://github.com/CannyLab/tsne-cuda

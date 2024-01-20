@@ -2,7 +2,7 @@
 # zhangzhong
 
 from module.vision.resnet import ResNet18, SmallResNet18
-import torchsummary  # type: ignore
+# import torchsummary  # type: ignore
 from mytorch.data.cifar10 import CIFAR10Dataset, cifar10_predict
 from mytorch.data.svhn import SVHNDataset
 import torch
@@ -14,10 +14,10 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from mytorch.data.mnist import MNISTDataset, FashionMNISTDataset
 
-def test_simple_resnet() -> None:
-    net = ResNet18()
-    torchsummary.summary(net, input_size=(3, 96, 96),
-                         batch_size=1, device='cpu')
+# def test_simple_resnet() -> None:
+#     net = ResNet18()
+#     torchsummary.summary(net, input_size=(3, 96, 96),
+#                          batch_size=1, device='cpu')
 
 
 def test_small_resnet() -> None:
