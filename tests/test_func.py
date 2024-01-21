@@ -91,8 +91,10 @@ def test_layer_norm():
     batch_size, seq_size, feature_size = 2, 2, 4
     ln = nn.LayerNorm(normalized_shape=feature_size)
     # x = torch.rand(size=(batch_size, seq_size, feature_size))
-    x = torch.tensor([[[1, 2, 3, 4], [6, 7, 3, 1]],
-                     [[5, 3, 6, 7], [4, 3, 8, 3]]], dtype=torch.float32)
+    x = torch.tensor(
+        [[[1, 2, 3, 4], [6, 7, 3, 1]], [[5, 3, 6, 7], [4, 3, 8, 3]]],
+        dtype=torch.float32,
+    )
     print(x)
     y = ln(x)
     print(y)
@@ -137,8 +139,7 @@ def test_multi_head():
     y = func.split_multi_head(input=x, num_head=num_head)
     # z = func.concat_multi_head(
     #     input=y, batch_size=batch_size, num_head=num_head)
-    z = func.concat_multi_head(
-        input=y, num_head=num_head)
+    z = func.concat_multi_head(input=y, num_head=num_head)
     # 卧槽 一遍过 太对了！！！
     assert torch.all(x == z)
 
@@ -164,7 +165,8 @@ def test_target_valid_lens():
     batch_size, max_len = 2, 4
     # TODO: device should be default
     target_valid_lens = func.make_target_valid_lens(
-        batch_size=batch_size, max_len=max_len, device='cpu')
+        batch_size=batch_size, max_len=max_len, device="cpu"
+    )
 
     print(target_valid_lens)
 
@@ -178,53 +180,68 @@ def test_corr2d():
     kernel = torch.tensor([[1.0, -1.0]])
     output = func.corr2d(input=input, kernel=kernel)
     # ground truth
-    ground_truth = torch.tensor([[0.,  1.,  0.,  0.,  0., -1.,  0.],
-                                 [0.,  1.,  0.,  0.,  0., -1.,  0.],
-                                 [0.,  1.,  0.,  0.,  0., -1.,  0.],
-                                 [0.,  1.,  0.,  0.,  0., -1.,  0.],
-                                 [0.,  1.,  0.,  0.,  0., -1.,  0.],
-                                 [0.,  1.,  0.,  0.,  0., -1.,  0.]])
+    ground_truth = torch.tensor(
+        [
+            [0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+        ]
+    )
 
     assert torch.all(output == ground_truth)
 
 
 def test_corr2d_case2():
     # test padding
-    input = torch.tensor([
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-    ])
-    kernel = torch.tensor([
-        [0, 1],
-        [2, 3],
-    ])
-    ground_truth = torch.tensor([
-        [0, 3, 8, 4],
-        [9, 19, 25, 10],
-        [21, 37, 43, 16],
-        [6, 7, 8, 0],
-    ])
+    input = torch.tensor(
+        [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+        ]
+    )
+    kernel = torch.tensor(
+        [
+            [0, 1],
+            [2, 3],
+        ]
+    )
+    ground_truth = torch.tensor(
+        [
+            [0, 3, 8, 4],
+            [9, 19, 25, 10],
+            [21, 37, 43, 16],
+            [6, 7, 8, 0],
+        ]
+    )
 
-    output = func.corr2d(input=input, padding=1,
-                         kernel=kernel, stride=1)
+    output = func.corr2d(input=input, padding=1, kernel=kernel, stride=1)
     assert torch.all(output == ground_truth)
 
 
 def test_corr2d_case3():
-    input = torch.tensor([
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-    ])
-    kernel = torch.tensor([
-        [0, 1],
-        [2, 3],
-    ])
-    ground_truth = torch.tensor([
-        [0, 8],
-        [6, 8],
-    ])
+    input = torch.tensor(
+        [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+        ]
+    )
+    kernel = torch.tensor(
+        [
+            [0, 1],
+            [2, 3],
+        ]
+    )
+    ground_truth = torch.tensor(
+        [
+            [0, 8],
+            [6, 8],
+        ]
+    )
 
     output = func.corr2d(input=input, padding=1, kernel=kernel, stride=(3, 2))
     assert torch.all(output == ground_truth)
@@ -232,10 +249,12 @@ def test_corr2d_case3():
 
 def test_max_pool2d():
     input = torch.arange(start=0, end=9).reshape(3, 3)
-    ground_truth = torch.tensor(data=[
-        [4, 5],
-        [7, 8],
-    ])
+    ground_truth = torch.tensor(
+        data=[
+            [4, 5],
+            [7, 8],
+        ]
+    )
 
     output = func.max_pool2d(input=input, kernel_size=2, padding=0, stride=1)
     assert torch.all(output == ground_truth)
@@ -243,10 +262,12 @@ def test_max_pool2d():
 
 def test_avg_pool2d():
     input = torch.arange(start=0, end=9).reshape(3, 3)
-    ground_truth = torch.tensor(data=[
-        [2, 3],
-        [5, 6],
-    ])
+    ground_truth = torch.tensor(
+        data=[
+            [2, 3],
+            [5, 6],
+        ]
+    )
 
     output = func.avg_pool2d(input=input, kernel_size=2, padding=0, stride=1)
     assert torch.all(output == ground_truth)
@@ -264,24 +285,94 @@ def test_make_key_padding_mask():
     mask = func.make_key_padding_mask(valid_lens=valid_lens, seq_size=seq_size)
     # For a binary mask, a True value indicates that the corresponding key
     # value will be ignored for the purpose of attention
-    ground_truth = torch.tensor([
-        [False, True, True, True],
-        [False, False, True, True],
-        [False, False, False, True],
-        [False, False, False, False],
-    ])
+    ground_truth = torch.tensor(
+        [
+            [False, True, True, True],
+            [False, False, True, True],
+            [False, False, False, True],
+            [False, False, False, False],
+        ]
+    )
     assert torch.all(mask == ground_truth)
 
 
 def test_make_padding_weight_mask():
     valid_lens = torch.tensor([1, 2, 3, 4])
     seq_size = 4
-    mask = func.make_padding_weight_mask(
-        valid_lens=valid_lens, seq_size=seq_size)
-    ground_truth = torch.tensor([
-        [1, 0, 0, 0],
-        [1, 1, 0, 0],
-        [1, 1, 1, 0],
-        [1, 1, 1, 1],
-    ])
+    mask = func.make_padding_weight_mask(valid_lens=valid_lens, seq_size=seq_size)
+    ground_truth = torch.tensor(
+        [
+            [1, 0, 0, 0],
+            [1, 1, 0, 0],
+            [1, 1, 1, 0],
+            [1, 1, 1, 1],
+        ]
+    )
     assert torch.all(mask == ground_truth)
+
+
+def test_cross_entropy():
+    # fc
+    logits = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float32)
+    labels = torch.tensor([0, 2])
+    labels_onehot = func.one_hot(labels, num_classes=3)
+    ground_truth = F.cross_entropy(input=logits, target=labels, reduction="none")
+    loss = func.cross_entropy(logits=logits, labels=labels_onehot)
+    assert torch.all((loss - ground_truth).abs() < 1e-6)
+
+    # sequence
+    logits = torch.randn(size=(3, 4, 5))
+    labels = torch.tensor([[1, 2, 3, 4], [2, 3, 4, 0], [3, 4, 0, 0]])
+    labels_onehot = func.one_hot(labels, num_classes=5)
+    assert logits.shape == labels_onehot.shape
+    # 原来torch算不了 input要么只有一个向量 要么就是上面fc的那种输入方式才能算
+    # 好垃圾 还不如我写的
+    ground_truth = F.cross_entropy(
+        input=logits.reshape(-1, 5), target=labels.reshape(-1), reduction="none"
+    ).reshape(3, 4)
+    loss = func.cross_entropy(logits=logits, labels=labels_onehot)
+    assert torch.all((loss - ground_truth).abs() < 1e-6)
+
+
+def test_uniform_distribution():
+    shape = (3, 4)
+    ground_truch = torch.tensor(
+        [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]
+    )
+    x = func.uniform_distribution(*shape)
+    assert torch.all((x - ground_truch).abs() < 1e-6)
+
+
+def test_cross_entropy_loss():
+    label_smoothing = 0.0
+    logits = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float32)
+    labels = torch.tensor([0, 2])
+    ground_truth = F.cross_entropy(
+        input=logits, target=labels, reduction="none", label_smoothing=label_smoothing
+    )
+    loss = func.cross_entropy_loss(
+        logits=logits, labels=labels, reduction="none", label_smoothing=label_smoothing
+    )
+    assert torch.all((loss - ground_truth).abs() < 1e-6)
+
+    label_smoothing = 0.1
+    logits = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float32)
+    labels = torch.tensor([0, 2])
+    ground_truth = F.cross_entropy(
+        input=logits, target=labels, reduction="mean", label_smoothing=label_smoothing
+    )
+    loss = func.cross_entropy_loss(
+        logits=logits, labels=labels, reduction="mean", label_smoothing=label_smoothing
+    )
+    assert torch.all((loss - ground_truth).abs() < 1e-6)
+
+    label_smoothing = 0.9
+    logits = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float32)
+    labels = torch.tensor([0, 2])
+    ground_truth = F.cross_entropy(
+        input=logits, target=labels, reduction="sum", label_smoothing=label_smoothing
+    )
+    loss = func.cross_entropy_loss(
+        logits=logits, labels=labels, reduction="sum", label_smoothing=label_smoothing
+    )
+    assert torch.all((loss - ground_truth).abs() < 1e-6)

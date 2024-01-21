@@ -8,6 +8,7 @@ from typing import Callable
 
 import torch
 import torch.nn.functional as F
+
 # https://pytorch.org/docs/stable/tensors.html
 # LongTensor: dtype = 64bit signed integer
 from torch import Tensor
@@ -32,14 +33,15 @@ def one_hot(input: Tensor, num_classes: int = -1) -> Tensor:
     # num_classes: total number of classes
     # num_classes = int(torch.max(input))
     # 我们需要保证Tensor的数据类型是整形
-    assert not torch.is_floating_point(
-        input=input) and not torch.is_complex(input=input)
+    assert not torch.is_floating_point(input=input) and not torch.is_complex(
+        input=input
+    )
 
     shape = input.shape
-    num_classes = num_classes if num_classes != - \
-        1 else int(torch.max(input)) + 1
-    result = torch.zeros(size=(*input.shape, num_classes), dtype=torch.long, device=input.device
-                         ).reshape(shape=(-1, num_classes))
+    num_classes = num_classes if num_classes != -1 else int(torch.max(input)) + 1
+    result = torch.zeros(
+        size=(*input.shape, num_classes), dtype=torch.long, device=input.device
+    ).reshape(shape=(-1, num_classes))
     # 我们遍历result的最后一个维度
     # flatten input
     # input = input.reshape(shape=(-1, 1)).squeeze()
@@ -61,8 +63,9 @@ def embedding(input: Tensor, weight: Tensor) -> Tensor:
     # shape = input.shape
     # result.shape = shape + (embed_size)
     # BUG: one_hot's result will back to cpu, why?
-    result = one_hot(
-        input=input, num_classes=vocab_size).float().reshape(-1, vocab_size)
+    result = (
+        one_hot(input=input, num_classes=vocab_size).float().reshape(-1, vocab_size)
+    )
     result = result @ weight
     return result.reshape(shape=(*input.shape, embed_size))
 
@@ -71,7 +74,9 @@ def embedding(input: Tensor, weight: Tensor) -> Tensor:
 # 这个函数应该只负责batch norm的计算而已
 
 
-def batch_norm(input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, momentum: float = 0.1) -> Tensor:
+def batch_norm(
+    input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, momentum: float = 0.1
+) -> Tensor:
     # 目前我们只处理二维的数据
     assert len(input.shape) == 2
     batch_size, feature_size = input.shape
@@ -95,7 +100,9 @@ def batch_norm(input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, mo
     return norm * gamma + beta
 
 
-def conv2d_batch_norm(input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, momentum: float = 0.1) -> Tensor:
+def conv2d_batch_norm(
+    input: Tensor, gamma: Tensor, beta: Tensor, eps: float = 1e-5, momentum: float = 0.1
+) -> Tensor:
     # 只处理图像数据 也就是四维的数据
     assert len(input.shape) == 4
     b, c, h, w = input.shape
@@ -214,23 +221,24 @@ def make_target_valid_lens(batch_size: int, max_len: int, device) -> Tensor:
     # target_valid_lens.shape = (batch_size, seq_len)
     # 而且不同的target输入的seq_len是不同的 所以这个东西还需要动态生成
     # TIP: valid_lens的类型应该是int
-    lens = torch.arange(start=1, end=max_len + 1,
-                        dtype=torch.int, device=device)
+    lens = torch.arange(start=1, end=max_len + 1, dtype=torch.int, device=device)
     # lens是行向量
     # 然后纵向扩展到batch_size
-    target_valid_lens = lens.repeat(
-        batch_size, 1)
+    target_valid_lens = lens.repeat(batch_size, 1)
     assert target_valid_lens.shape == (batch_size, max_len)
     return target_valid_lens
 
 
 def make_key_padding_mask(valid_lens: Tensor, seq_size: int) -> Tensor:
-    assert (len(valid_lens.shape) == 1)
+    assert len(valid_lens.shape) == 1
     valid_lens = valid_lens.repeat_interleave(seq_size).reshape(-1, seq_size)
     batch_size, _ = valid_lens.shape
 
-    mask = torch.arange(end=seq_size, device=valid_lens.device).reshape(
-        1, -1).repeat(batch_size, 1)
+    mask = (
+        torch.arange(end=seq_size, device=valid_lens.device)
+        .reshape(1, -1)
+        .repeat(batch_size, 1)
+    )
     assert mask.shape == (batch_size, seq_size)
     mask = mask >= valid_lens
     return mask
@@ -248,13 +256,13 @@ class PaddingResult:
     padding_weight_mask: Tensor
 
 
-def dynamic_padding(seqs: list[list[int]],  max_len: int, pad: int) -> PaddingResult:
+def dynamic_padding(seqs: list[list[int]], max_len: int, pad: int) -> PaddingResult:
     max_len = min(max_len, max([len(seq) for seq in seqs]))
-    valid_lens = [len(seq) if len(seq) < max_len else max_len
-                  for seq in seqs]
-    aligned_seqs = [seq[:max_len] if len(seq) > max_len
-                    else seq + [pad]*(max_len-len(seq))
-                    for seq in seqs]
+    valid_lens = [len(seq) if len(seq) < max_len else max_len for seq in seqs]
+    aligned_seqs = [
+        seq[:max_len] if len(seq) > max_len else seq + [pad] * (max_len - len(seq))
+        for seq in seqs
+    ]
 
     for seq in aligned_seqs:
         assert len(seq) == max_len
@@ -264,11 +272,12 @@ def dynamic_padding(seqs: list[list[int]],  max_len: int, pad: int) -> PaddingRe
     # 这个权重矩阵的作用是告诉模型哪些是padding哪些不是padding
     return PaddingResult(
         padded_seqs=torch.tensor(aligned_seqs, dtype=torch.long),
-        padding_mask=make_key_padding_mask(valid_lens=torch.tensor(
-            valid_lens, dtype=torch.long), seq_size=max_len),
+        padding_mask=make_key_padding_mask(
+            valid_lens=torch.tensor(valid_lens, dtype=torch.long), seq_size=max_len
+        ),
         padding_weight_mask=make_padding_weight_mask(
-            valid_lens=torch.tensor(valid_lens, dtype=torch.long),
-            seq_size=max_len)
+            valid_lens=torch.tensor(valid_lens, dtype=torch.long), seq_size=max_len
+        ),
     )
 
 
@@ -304,12 +313,17 @@ def add_padding(input: Tensor, padding: int | tuple[int, int]) -> Tensor:
     ph, pw = padding
 
     output = torch.zeros(size=(h + ph * 2, w + pw * 2), device=input.device)
-    output[ph:ph + h, pw:pw + w] = input
+    output[ph : ph + h, pw : pw + w] = input
     return output
 
 
-def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[[Tensor], Tensor],
-                padding: int | tuple[int, int] = 0, stride: int | tuple[int, int] = 1) -> Tensor:
+def corr2d_impl(
+    input: Tensor,
+    kernel_size: int | tuple[int, int],
+    op: Callable[[Tensor], Tensor],
+    padding: int | tuple[int, int] = 0,
+    stride: int | tuple[int, int] = 1,
+) -> Tensor:
     assert len(input.shape) == 2
     # assert len(kernel.shape) == 2
     # 现在去掉这个假设 我们的代码需要作出什么改动？
@@ -354,19 +368,28 @@ def corr2d_impl(input: Tensor, kernel_size: int | tuple[int, int], op: Callable[
             # 在input上 以(row+pad, col+pad)为中心，选取变长为kernel_size
             # 刚好窗口的起始位置是row+pad-pad=row 即(row, pad) on input
             # perfect!
-            window = input[row * sh:row * sh + kh, col * sw:col * sw + kw]
+            window = input[row * sh : row * sh + kh, col * sw : col * sw + kw]
             output[row, col] = op(window)
 
     return output
 
 
-def corr2d(input: Tensor, kernel: Tensor, padding: int | tuple[int, int] = 0,
-           stride: int | tuple[int, int] = 1) -> Tensor:
+def corr2d(
+    input: Tensor,
+    kernel: Tensor,
+    padding: int | tuple[int, int] = 0,
+    stride: int | tuple[int, int] = 1,
+) -> Tensor:
     h, w = input.shape
     assert len(kernel.shape) == 2
     kh, kw = kernel.shape
-    return corr2d_impl(input, op=lambda window: (kernel * window).sum(), kernel_size=(kh, kw), padding=padding,
-                       stride=stride)
+    return corr2d_impl(
+        input,
+        op=lambda window: (kernel * window).sum(),
+        kernel_size=(kh, kw),
+        padding=padding,
+        stride=stride,
+    )
 
 
 # https://pytorch.org/docs/stable/generated/torch.nn.AvgPool2d.html
@@ -374,14 +397,26 @@ def corr2d(input: Tensor, kernel: Tensor, padding: int | tuple[int, int] = 0,
 
 # pool和corr一样 他们期望输入是二维的
 # 但是实际上的输入是四维的 所以我们需要做和Conv2d一样的处理
-def avg_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0,
-               stride: int | tuple[int, int] = 1) -> Tensor:
-    return corr2d_impl(input, op=torch.mean, kernel_size=kernel_size, padding=padding, stride=stride)
+def avg_pool2d(
+    input: Tensor,
+    kernel_size: int | tuple[int, int],
+    padding: int | tuple[int, int] = 0,
+    stride: int | tuple[int, int] = 1,
+) -> Tensor:
+    return corr2d_impl(
+        input, op=torch.mean, kernel_size=kernel_size, padding=padding, stride=stride
+    )
 
 
-def max_pool2d(input: Tensor, kernel_size: int | tuple[int, int], padding: int | tuple[int, int] = 0,
-               stride: int | tuple[int, int] = 1) -> Tensor:
-    return corr2d_impl(input, op=torch.max, kernel_size=kernel_size, padding=padding, stride=stride)
+def max_pool2d(
+    input: Tensor,
+    kernel_size: int | tuple[int, int],
+    padding: int | tuple[int, int] = 0,
+    stride: int | tuple[int, int] = 1,
+) -> Tensor:
+    return corr2d_impl(
+        input, op=torch.max, kernel_size=kernel_size, padding=padding, stride=stride
+    )
 
 
 def dropout(X: torch.Tensor, dropout: float) -> Tensor:
@@ -425,8 +460,10 @@ def masked_softmax(X, valid_lens, my_mask=None):
     # X: 3D tensor, valid_lens: 1D or 2D tensor
     def _sequence_mask(X, valid_len, value: float = 0):
         maxlen = X.size(1)
-        mask = torch.arange((maxlen), dtype=torch.float32,
-                            device=X.device)[None, :] < valid_len[:, None]
+        mask = (
+            torch.arange((maxlen), dtype=torch.float32, device=X.device)[None, :]
+            < valid_len[:, None]
+        )
 
         # mask 和
         if my_mask is not None:
@@ -457,3 +494,56 @@ def masked_softmax(X, valid_lens, my_mask=None):
         # value, whose exponentiation outputs 0
         X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
         return F.softmax(X.reshape(shape), dim=-1)
+
+
+# 现在这个函数可以任意shape的向量 只要shape是一样的就行
+def cross_entropy(logits: Tensor, labels: Tensor) -> Tensor:
+    assert logits.shape == labels.shape
+
+    # step 1. max
+    repeats = [1] * logits.dim()
+    repeats[-1] = logits.shape[-1]
+    c = logits.max(dim=-1, keepdim=True)[0].repeat(*repeats)
+    assert logits.shape == c.shape
+
+    # step 2. logsumexp
+    y = logits - c
+    logsumexp = y.exp().sum(dim=-1, keepdim=True).log().repeat(*repeats)
+    assert logits.shape == logsumexp.shape
+
+    # step 3. calculate
+    return -torch.sum((logits - c - logsumexp) * labels, dim=-1)
+
+
+# 像这种函数应该给一个device参数
+def uniform_distribution(*shape: int, device: torch.device | None = None) -> Tensor:
+    return torch.ones(shape, dtype=torch.float32, device=device) / shape[-1]
+
+
+def cross_entropy_loss(
+    logits: Tensor,
+    labels: Tensor,
+    reduction: str = "mean",
+    label_smoothing: float = 0.0,
+) -> Tensor:
+    valid_reductions = ["none", "mean", "sum"]
+    if reduction not in valid_reductions:
+        raise ValueError(f"invalid reduction: {reduction}")
+
+    labels = one_hot(labels, num_classes=logits.shape[-1])
+    assert logits.shape == labels.shape
+
+    u = uniform_distribution(*logits.shape, device=logits.device)
+    assert u.shape == logits.shape
+
+    # label smoothing
+    loss = (1.0 - label_smoothing) * cross_entropy(
+        logits=logits, labels=labels
+    ) + label_smoothing * cross_entropy(logits=logits, labels=u)
+
+    # reduction: none, mean, sum
+    if reduction == "mean":
+        return loss.mean()
+    elif reduction == "sum":
+        return loss.sum()
+    return loss

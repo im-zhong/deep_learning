@@ -6,6 +6,7 @@ import numpy as np
 from torch import Tensor
 from typing import Iterator
 from torch import nn
+from mytorch import func
 
 
 class Loss:
@@ -21,7 +22,8 @@ class MSELoss(Loss):
         super().__init__()
 
     def __call__(self, y_hat, y):
-        return torch.mean((y_hat - y)**2) / 2
+        return torch.mean((y_hat - y) ** 2) / 2
+
 
 # todo: weight_decay 需要 module.parameters().weights
 
@@ -88,11 +90,15 @@ class NaiveCrossEntropyLoss(Loss):
         p_matrix = exp_logits / sumexp_logits
         return p_matrix
 
+
 # TODO: 现在为了实现RNN，CrossEntropy需要考虑三维的向量
 
 
+# https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+# TODO: 模仿pytorch的实现思路，这些类其实都只是一层包装，真正的实现都是一个函数
+# 这样更方便测试
 class CrossEntropyLoss(Loss):
-    def __init__(self, calculate_mean: bool = True):
+    def __init__(self, calculate_mean: bool = True, label_smoothing: float = 0.0):
         super().__init__()
         self.calculate_mean = calculate_mean
 
@@ -145,7 +151,7 @@ class CrossEntropyLoss(Loss):
         # # 求和完成之后对每个元素求log
         # log_y_hat = torch.log(sumed_y_hat)
 
-        logsumexp = torch.log(torch.sum(torch.exp(y_hat-c), dim=1))
+        logsumexp = torch.log(torch.sum(torch.exp(y_hat - c), dim=1))
 
         # 在计算完毕之后 在将c进行一个squeeze 因为计算的loss的时候我们不应该再广播了
         c = c.squeeze()
@@ -167,3 +173,22 @@ class CrossEntropyLoss(Loss):
 
 #     def new(self, model: nn.Module, optimizer):
 #         if
+
+
+class MyCrossEntropyLoss(Loss):
+    def __init__(self, reduction: str = "mean", label_smoothing: float = 0.0):
+        super().__init__()
+        self.reduction = reduction
+        self.label_smoothing = label_smoothing
+
+    def __call__(self, y_hat: Tensor, y: Tensor) -> Tensor:
+        """
+        y_hat: shape=(batch_size, num_labels) logits, 也就是线性输出
+        y: shape=(batch_size,) labels, 代表是的类别 0, 1, 2 ...
+        """
+        return func.cross_entropy_loss(
+            logits=y_hat,
+            labels=y,
+            reduction=self.reduction,
+            label_smoothing=self.label_smoothing,
+        )
