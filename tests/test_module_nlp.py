@@ -2,10 +2,10 @@
 # zhangzhong
 
 
-from module.nlp.attention_seq2seq import AttentionEncoder, AttentionDecoder
+from module.nlp.attention_seq2seq import AttentionDecoder, AttentionEncoder
+from mytorch import optim, training
 from mytorch.data.seq import TranslationDataManager
 from mytorch.net.seq2seq import Seq2Seq, Seq2SeqLoss
-from mytorch import training, optim
 
 
 def test_seq2seqwithattention():

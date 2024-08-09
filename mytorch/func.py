@@ -5,6 +5,8 @@
 # 主要是用来写跟模型架构有关的函数
 # TODO: 这个模块里面的东西太多了 应该组织成一个package
 
+from dataclasses import dataclass
+
 # from torch import LongTensor
 from typing import Callable
 
@@ -14,8 +16,6 @@ import torch.nn.functional as F
 # https://pytorch.org/docs/stable/tensors.html
 # LongTensor: dtype = 64bit signed integer
 from torch import Tensor
-from dataclasses import dataclass
-
 
 # Takes LongTensor with index values of shape (*) and returns a tensor of shape (*, num_classes)
 # that have zeros everywhere except where the index of last dimension matches the corresponding value of the input tensor,

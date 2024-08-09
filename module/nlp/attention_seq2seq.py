@@ -2,18 +2,27 @@
 # zhangzhong
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
+
+from mytorch.data.seq import VocabularyV2
+from mytorch.net.attention import MaskedDotProductAttention
+
 # TODO: 把这些net的子模块都隐藏起来，这样我就可以像这样import
 # from mytorch.net import MyDeepGRU, MyEmbedding, ...
 # from mytorch.data import DatasetA, DatasetB, ...
 from mytorch.net.rnn import MyDeepGRU
 from mytorch.net.seq2seq import MyEmbedding
-from mytorch.net.attention import MaskedDotProductAttention
-from mytorch.data.seq import VocabularyV2
 
 
 class AttentionEncoder(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int, hidden_size: int, num_layers: int, vocab: VocabularyV2):
+    def __init__(
+        self,
+        vocab_size: int,
+        embed_size: int,
+        hidden_size: int,
+        num_layers: int,
+        vocab: VocabularyV2,
+    ):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -21,8 +30,9 @@ class AttentionEncoder(nn.Module):
         self.num_layers = num_layers
         self.vocab = vocab
         self.embedding = MyEmbedding(vocab_size, embed_size)
-        self.rnn = MyDeepGRU(input_size=embed_size,
-                             hidden_size=hidden_size, num_layers=num_layers)
+        self.rnn = MyDeepGRU(
+            input_size=embed_size, hidden_size=hidden_size, num_layers=num_layers
+        )
 
     # TODO:
     # 其实encoder几乎没有变化
@@ -50,7 +60,9 @@ class AttentionEncoder(nn.Module):
 
 
 class AttentionDecoder(nn.Module):
-    def __init__(self, vocab_size: int, embed_size: int, hidden_size: int, num_layers: int):
+    def __init__(
+        self, vocab_size: int, embed_size: int, hidden_size: int, num_layers: int
+    ):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_size = embed_size
@@ -61,16 +73,24 @@ class AttentionDecoder(nn.Module):
         self.attention = MaskedDotProductAttention()
         # 注意这里decoder的输入是embed + context variable
         # 而且attention版本的contxext variable是变化的 每次迭代都需要去attention
-        self.rnn = MyDeepGRU(input_size=embed_size+hidden_size,
-                             hidden_size=hidden_size, num_layers=num_layers)
-        self.output_layer = nn.Linear(
-            in_features=hidden_size, out_features=vocab_size)
+        self.rnn = MyDeepGRU(
+            input_size=embed_size + hidden_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+        )
+        self.output_layer = nn.Linear(in_features=hidden_size, out_features=vocab_size)
 
     # TODO: to remove this
     def clear_history(self):
         pass
 
-    def forward(self, target: Tensor, encoder_output: Tensor, encoder_state: Tensor, valid_lens: Tensor | None = None) -> tuple[Tensor, Tensor]:
+    def forward(
+        self,
+        target: Tensor,
+        encoder_output: Tensor,
+        encoder_state: Tensor,
+        valid_lens: Tensor | None = None,
+    ) -> tuple[Tensor, Tensor]:
         batch_size, num_seqtgt = target.shape
         srcseq_size, batch_size, hidden_size = encoder_output.shape
         num_layers, batch_size, hidden_size = encoder_state.shape
@@ -97,7 +117,8 @@ class AttentionDecoder(nn.Module):
         for xt in embed:
             # 每个token都需要重新计算context
             _, contexts = self.attention(
-                queries=queries, keys=keys, values=values, valid_lens=valid_lens)
+                queries=queries, keys=keys, values=values, valid_lens=valid_lens
+            )
             assert contexts.shape == (batch_size, 1, hidden_size)
             contexts = contexts.squeeze(1)
             assert contexts.shape == (batch_size, hidden_size)
@@ -109,8 +130,7 @@ class AttentionDecoder(nn.Module):
             # 但是rnn只接受 (num_seq, batch_size, input_size)这样类型的输入
             # 所以我们需要给xt在第一个维度上添加1
 
-            decoder_output, decoder_state = self.rnn(
-                xt.unsqueeze(0), decoder_state)
+            decoder_output, decoder_state = self.rnn(xt.unsqueeze(0), decoder_state)
             # decoder_output需要不断累积起来
             # 最后一个stack就可以了 实现起来和rnn内部的实现差不多
             assert decoder_output.shape == (1, batch_size, hidden_size)
@@ -134,8 +154,7 @@ class AttentionDecoder(nn.Module):
         assert len(outputs) == num_seqtgt
 
         outputs_tensor = torch.stack(outputs, dim=1)
-        assert outputs_tensor.shape == (
-            batch_size, num_seqtgt, self.vocab_size)
+        assert outputs_tensor.shape == (batch_size, num_seqtgt, self.vocab_size)
         # outputs要和label做cross entropy
         # 我们需要确认label的shape = (batch_size, num_seq)
         # 完全正确

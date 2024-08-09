@@ -2,15 +2,16 @@
 # zhangzhong
 # https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
 
-import torch
-from torch import nn, Tensor
-from torch.utils.data import Dataset, DataLoader
 import os
 import random
-from mytorch.data.seq import VocabularyV3
 from dataclasses import dataclass
-from mytorch import func
 
+import torch
+from torch import Tensor, nn
+from torch.utils.data import DataLoader, Dataset
+
+from mytorch import func
+from mytorch.data.seq import VocabularyV3
 
 # TODO: 这个函数应该放到 func.py 里面
 # 重构dynamic padding
@@ -30,25 +31,31 @@ class WikiText2Sample:
     segments: Tensor
     mask: Tensor
 
-    def to(self, device: torch.device) -> 'WikiText2Sample':
-        return WikiText2Sample(sentences=self.sentences.to(device),
-                               segments=self.segments.to(device),
-                               mask=self.mask.to(device))
+    def to(self, device: torch.device) -> "WikiText2Sample":
+        return WikiText2Sample(
+            sentences=self.sentences.to(device),
+            segments=self.segments.to(device),
+            mask=self.mask.to(device),
+        )
 
 
 # 应该在这里返回valid_lens
-def dynamic_padding(seqs: list[list[int]],  max_len: int, pad: int) -> tuple[Tensor, Tensor]:
+def dynamic_padding(
+    seqs: list[list[int]], max_len: int, pad: int
+) -> tuple[Tensor, Tensor]:
     max_len = min(max_len, max([len(seq) for seq in seqs]))
-    valid_lens = [len(seq) if len(seq) < max_len else max_len
-                  for seq in seqs]
-    aligned_seqs = [seq[:max_len] if len(seq) > max_len
-                    else seq + [pad]*(max_len-len(seq))
-                    for seq in seqs]
+    valid_lens = [len(seq) if len(seq) < max_len else max_len for seq in seqs]
+    aligned_seqs = [
+        seq[:max_len] if len(seq) > max_len else seq + [pad] * (max_len - len(seq))
+        for seq in seqs
+    ]
 
     for seq in aligned_seqs:
         assert len(seq) == max_len
     assert len(valid_lens) == len(aligned_seqs)
-    return torch.tensor(aligned_seqs, dtype=torch.long), torch.tensor(valid_lens, dtype=torch.long)
+    return torch.tensor(aligned_seqs, dtype=torch.long), torch.tensor(
+        valid_lens, dtype=torch.long
+    )
 
 
 class DynamicPadding:
@@ -57,7 +64,10 @@ class DynamicPadding:
         self.max_len = max_len
         self.segment_vocabulary = VocabularyV3(
             # must give unk, 否则会报错
-            text='', reserved_tokens=['<tmp>', '<pad>', '<unk>'], min_frequency=0)
+            text="",
+            reserved_tokens=["<tmp>", "<pad>", "<unk>"],
+            min_frequency=0,
+        )
 
     # TODO: 还缺一个东西，valid_lens
     # 我懂了，collate_fn的输出是整个dataset的输出 也就是一个tuple
@@ -70,10 +80,12 @@ class DynamicPadding:
         sentences: list[list[int]] = [item.sentence for item in batch]
         segments: list[list[int]] = [item.segment for item in batch]
         labels: list[bool] = [item.label for item in batch]
-        padded_sentences, valid_lens = dynamic_padding(seqs=sentences, max_len=self.max_len,
-                                                       pad=self.vocabulary.pad())
-        padded_segments, _ = dynamic_padding(seqs=segments, max_len=self.max_len,
-                                             pad=self.segment_vocabulary.pad())
+        padded_sentences, valid_lens = dynamic_padding(
+            seqs=sentences, max_len=self.max_len, pad=self.vocabulary.pad()
+        )
+        padded_segments, _ = dynamic_padding(
+            seqs=segments, max_len=self.max_len, pad=self.segment_vocabulary.pad()
+        )
         # 两者的shape必须一致
         assert padded_sentences.shape == padded_segments.shape
         # change labels to tensor
@@ -84,11 +96,14 @@ class DynamicPadding:
         # 而且x也应该用dataclass包装起来
         # 从valid_lens生成mask
         batch_size, seq_size = padded_segments.shape
-        mask = func.make_key_padding_mask(
-            valid_lens=valid_lens, seq_size=seq_size)
-        return WikiText2Sample(sentences=padded_sentences,
-                               segments=padded_segments,
-                               mask=mask), tlabels
+        mask = func.make_key_padding_mask(valid_lens=valid_lens, seq_size=seq_size)
+        return (
+            WikiText2Sample(
+                sentences=padded_sentences, segments=padded_segments, mask=mask
+            ),
+            tlabels,
+        )
+
 
 # TODO: 限制maxlen 否则容易在训练的时候崩溃
 
@@ -98,17 +113,17 @@ class WikiText2(Dataset):
         self.root = root
         assert split in ["train", "valid", "test"]
         self.split = split
-        lines = self.read_wiki(os.path.join(root, f'wiki.{split}.tokens'))
+        lines = self.read_wiki(os.path.join(root, f"wiki.{split}.tokens"))
         paragraphs = self.gen_paragraphs(lines)
         nsp = self.gen_nsp(paragraphs)
-        self.nsp_examples, self.nsp_labels = self.add_segment_and_make_token(
-            nsp)
+        self.nsp_examples, self.nsp_labels = self.add_segment_and_make_token(nsp)
 
         # make paragraphs to str
-        self.vocabulary = VocabularyV3(text=' '.join([' '.join(paragraph) for paragraph in paragraphs]),
-                                       reserved_tokens=[
-                                           '<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
-                                       min_frequency=5)
+        self.vocabulary = VocabularyV3(
+            text=" ".join([" ".join(paragraph) for paragraph in paragraphs]),
+            reserved_tokens=["<pad>", "<unk>", "<bos>", "<eos>", "<cls>", "<seq>"],
+            min_frequency=5,
+        )
 
     def __getitem__(self, index) -> WikiText2Item:
         # TODO: 需要转成Tensor吗？如果要转成Tensor就需要实现Vocabulary和tokenize
@@ -125,25 +140,36 @@ class WikiText2(Dataset):
         return len(self.nsp_examples)
 
     # 我们让这个类可以直接返回dataloader 这样就更简单了
-    def get_dataloader(self, batch_size: int, shuffle: bool = False, num_workers: int = 0) -> DataLoader:
+    def get_dataloader(
+        self, batch_size: int, shuffle: bool = False, num_workers: int = 0
+    ) -> DataLoader:
         # 重点关注 data collator 因为我们需要指定dynamic padding
         # !!! collate_fn的输入需要和datasets[indicies]的输出一致 然后collate_fn需要返回一系列tensor
         # 作为整个dataloader的输出
-        return DataLoader(dataset=self, batch_size=batch_size, shuffle=shuffle,
-                          num_workers=num_workers,
-                          collate_fn=DynamicPadding(vocabulary=self.vocabulary, max_len=512))  # type: ignore
+        return DataLoader(
+            dataset=self,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            collate_fn=DynamicPadding(vocabulary=self.vocabulary, max_len=512),
+        )  # type: ignore
 
     def read_wiki(self, path: str) -> list[str]:
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             # f.readlines() will read all lines and seperate them with '\n'
             lines = f.readlines()
         return lines
 
     def gen_paragraphs(self, lines: list[str]) -> list[list[str]]:
-        return [line.strip().lower().split(' . ')
-                for line in lines if len(line.split(' . ')) > 1]
+        return [
+            line.strip().lower().split(" . ")
+            for line in lines
+            if len(line.split(" . ")) > 1
+        ]
 
-    def gen_next_sentence(self, sentence, next_sentence, paragraphs) -> tuple[str, str, bool]:
+    def gen_next_sentence(
+        self, sentence, next_sentence, paragraphs
+    ) -> tuple[str, str, bool]:
         # Choose a random element from a non-empty sequence.
         if random.choice([True, False]):
             return sentence, next_sentence, True
@@ -157,22 +183,23 @@ class WikiText2(Dataset):
                 sentence = paragraph[i]
                 next_sentence = paragraph[i + 1]
                 sentence, next_sentence, label = self.gen_next_sentence(
-                    sentence, next_sentence, paragraphs)
+                    sentence, next_sentence, paragraphs
+                )
 
                 nsp.append((sentence, next_sentence, label))
         return nsp
 
-    def add_segment_and_make_token(self, nsp: list[tuple[str, str, bool]]) -> tuple[list[tuple[list[str], list[int]]], list[bool]]:
+    def add_segment_and_make_token(
+        self, nsp: list[tuple[str, str, bool]]
+    ) -> tuple[list[tuple[list[str], list[int]]], list[bool]]:
         nsp_examples: list[tuple[list[str], list[int]]] = []
         nsp_labels: list[bool] = []
         for sentence, next_sentence, label in nsp:
             nsp_labels.append(label)
             sentence = sentence.split()
             next_sentence = next_sentence.split()
-            tokens = ['<cls>'] + sentence + \
-                ['<sep>'] + next_sentence + ['<eos>']
-            segments = [0] + [0] * len(sentence) + \
-                [0] + [1] * len(next_sentence) + [1]
+            tokens = ["<cls>"] + sentence + ["<sep>"] + next_sentence + ["<eos>"]
+            segments = [0] + [0] * len(sentence) + [0] + [1] * len(next_sentence) + [1]
             assert len(tokens) == len(segments)
             nsp_examples.append((tokens, segments))
         return nsp_examples, nsp_labels

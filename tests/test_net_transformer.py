@@ -1,13 +1,14 @@
 # 2023/11/21
 # zhangzhong
 
-from mytorch.data.seq import TimeMachineDataset, TranslationDataManager
-from mytorch.net.rnn import RNNScratch, MyLSTM, MyRNN, MyDeepGRU, MyBiGRU, MyGRU
-from mytorch.net.lm import LanguageModelScratch, LanguageModel
-from mytorch import training, losses, optim
 import torch.nn
-from mytorch.net.seq2seq import Encoder, Decoder, MyEmbedding, Seq2Seq, Seq2SeqLoss
-from mytorch.net.transformer import TransformerEncoder, TransformerDecoder
+
+from mytorch import losses, optim, training
+from mytorch.data.seq import TimeMachineDataset, TranslationDataManager
+from mytorch.net.lm import LanguageModel, LanguageModelScratch
+from mytorch.net.rnn import MyBiGRU, MyDeepGRU, MyGRU, MyLSTM, MyRNN, RNNScratch
+from mytorch.net.seq2seq import Decoder, Encoder, MyEmbedding, Seq2Seq, Seq2SeqLoss
+from mytorch.net.transformer import TransformerDecoder, TransformerEncoder
 
 
 def test_Transformer():
@@ -30,10 +31,22 @@ def test_Transformer():
     # num_layers = 3
     num_blocks = 2
     num_head = 4
-    encoder = TransformerEncoder(vocab_size=len(
-        source_vocab), hidden_size=hidden_size, ffn_hidden_size=ffn_hidden_size, num_head=num_head, num_blocks=num_blocks, vocab=source_vocab)
-    decoder = TransformerDecoder(vocab_size=len(
-        target_vocab), hidden_size=hidden_size, ffn_hidden_size=ffn_hidden_size, num_head=num_head, num_blocks=num_blocks, vocab=target_vocab)
+    encoder = TransformerEncoder(
+        vocab_size=len(source_vocab),
+        hidden_size=hidden_size,
+        ffn_hidden_size=ffn_hidden_size,
+        num_head=num_head,
+        num_blocks=num_blocks,
+        vocab=source_vocab,
+    )
+    decoder = TransformerDecoder(
+        vocab_size=len(target_vocab),
+        hidden_size=hidden_size,
+        ffn_hidden_size=ffn_hidden_size,
+        num_head=num_head,
+        num_blocks=num_blocks,
+        vocab=target_vocab,
+    )
     seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)  # type: ignore
 
     batch_size = 128
@@ -48,15 +61,14 @@ def test_Transformer():
         loss_fn=Seq2SeqLoss(target_vocab),
         # optimizer=optim.SGD(params=seq2seq.parameters(),
         #                     lr=learning_rate, gradient_clip=gradient_clip),
-        optimizer=torch.optim.Adam(
-            params=seq2seq.parameters(), lr=learning_rate),
+        optimizer=torch.optim.Adam(params=seq2seq.parameters(), lr=learning_rate),
         num_epochs=num_epochs,
         train_dataloader=train_dl,
-        val_dataloader=val_dl
+        val_dataloader=val_dl,
     )
 
-    trainer.train(tag='Transformer')
+    trainer.train(tag="Transformer")
 
-    source = 'hello, world!'
+    source = "hello, world!"
     target = seq2seq.predict(trans=trans, prompt=source)
-    print(f'source: {source}, target: {target}')
+    print(f"source: {source}, target: {target}")

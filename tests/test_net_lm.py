@@ -1,11 +1,12 @@
 # 2023/11/20
 # zhangzhong
 
-from mytorch.data.seq import TimeMachineDataset
-from mytorch.net.rnn import RNNScratch, MyLSTM, MyRNN, MyDeepGRU, MyBiGRU, MyGRU
-from mytorch.net.lm import LanguageModelScratch, LanguageModel
-from mytorch import training, losses, optim
 import torch.nn
+
+from mytorch import losses, optim, training
+from mytorch.data.seq import TimeMachineDataset
+from mytorch.net.lm import LanguageModel, LanguageModelScratch
+from mytorch.net.rnn import MyBiGRU, MyDeepGRU, MyGRU, MyLSTM, MyRNN, RNNScratch
 
 
 def test_RNNLM():

@@ -1,9 +1,11 @@
 # 2023/9/9
 # zhangzhong
 
-from mytorch import losses
-import torch
 import math
+
+import torch
+
+from mytorch import losses
 
 
 def test_MSELoss():
@@ -13,7 +15,7 @@ def test_MSELoss():
 
     loss = losses.MSELoss()
     loss = loss(y_hat, y)
-    assert loss == torch.mean((y_hat - y)**2) / 2
+    assert loss == torch.mean((y_hat - y) ** 2) / 2
 
 
 def test_CrossEntropyLoss():
@@ -70,7 +72,7 @@ def test_CrossEntropyLossShape():
     assert labels.shape == torch.Size([batch_size])
 
     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-    correct_loss_fn = torch.nn.CrossEntropyLoss(reduction='none')
+    correct_loss_fn = torch.nn.CrossEntropyLoss(reduction="none")
     correct_loss = correct_loss_fn(logits, labels)
     # shape = (32,), shape = (batch_size,), shape = labels.shape
     print(correct_loss.shape)

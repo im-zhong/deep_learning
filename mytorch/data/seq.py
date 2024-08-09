@@ -1,13 +1,15 @@
 # 2023/11/20
 # zhangzhong
 
-import torch
-import re
-from torch import Tensor
-import torch.utils.data
-import torch.nn.functional as F
 import copy
 import random
+import re
+
+import torch
+import torch.nn.functional as F
+import torch.utils.data
+from torch import Tensor
+
 from . import data
 
 

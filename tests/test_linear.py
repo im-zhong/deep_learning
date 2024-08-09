@@ -2,8 +2,9 @@
 # zhangzhong
 
 
-from mytorch.data import linear
 import torch
+
+from mytorch.data import linear
 
 
 def test_SyntheticLinearRegressionData():
@@ -17,11 +18,9 @@ def test_SyntheticLinearRegressionData():
     assert len(train_data) == num
 
     batch_size = 32
-    train_dataloader = train_data.get_dataloader(
-        batch_size=batch_size, shuffle=True)
+    train_dataloader = train_data.get_dataloader(batch_size=batch_size, shuffle=True)
     assert len(train_dataloader) == 32
 
     for X, y in train_dataloader:
-        assert X.shape == (batch_size, len(w)) or X.shape == (
-            num % batch_size, len(w))
+        assert X.shape == (batch_size, len(w)) or X.shape == (num % batch_size, len(w))
         assert y.shape == (batch_size, 1) or y.shape == (num % batch_size, 1)

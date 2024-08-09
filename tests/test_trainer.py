@@ -2,14 +2,15 @@
 # zhangzhong
 
 import torch
-from mytorch.data import linear
-import mytorch.net
-import mytorch.training
-import mytorch.optim as optim
-from torch import nn
 from matplotlib import pyplot as plt
+from torch import nn
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+
+import mytorch.net
+import mytorch.optim as optim
+import mytorch.training
 from mytorch import utils
-from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
+from mytorch.data import linear
 
 
 def test_Trainer():

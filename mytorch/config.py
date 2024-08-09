@@ -4,5 +4,5 @@
 
 conf = {
     # 'device': 'cuda:3',
-    'predict': False,
+    "predict": False,
 }

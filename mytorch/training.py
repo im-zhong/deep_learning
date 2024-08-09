@@ -7,26 +7,27 @@
 # 原来如此 epoch epochs batch batches
 
 
+import json
+import os.path
 from dataclasses import dataclass
-from tqdm import tqdm
+from typing import Any
+
+import torch
+import torchinfo
+from torch import Tensor, device, nn
+from torch.nn import Module
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torch.utils.data import DataLoader
 
 # import torch.utils.tensorboard as tb
 from torch.utils.tensorboard.writer import SummaryWriter
-import torch
-from torch import device, nn, Tensor
-import os.path
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler
-from torch.nn import Module
-from torch.utils.data import DataLoader
-import json
-import torchinfo
-from mytorch import utils
+from tqdm import tqdm
+
 from module.nlp.bert import BERTOutput
-from typing import Any
+from mytorch import utils
 from mytorch.data.wikitext2v2 import WikiText2Label
 from mytorch.metrics import Evaluator, Metrics
-
 
 # TODO: 我有一个想法，对于我们训练过程中的每一个中间过程都应该保存下来
 # 而且应该保存对应的训练信息，我们后期挑选模型应该用的到 而不是重新训练

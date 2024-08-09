@@ -1,5 +1,6 @@
-from . import data
 import torch
+
+from . import data
 
 
 class SyntheticLinearRegressionData(data.DataModule):

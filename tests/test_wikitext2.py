@@ -1,14 +1,15 @@
 # 2023/12/21
 # zhangzhong
 
-from mytorch.data.wikitext2 import WikiText2, WikiText2Sample
-from torch.utils.data import DataLoader
 import torch
 from torch import Tensor
+from torch.utils.data import DataLoader
+
+from mytorch.data.wikitext2 import WikiText2, WikiText2Sample
 
 
 def test_wikitext2() -> None:
-    wiki = WikiText2(root='datasets/wikitext-2', split='train')
+    wiki = WikiText2(root="datasets/wikitext-2", split="train")
     print(len(wiki))
     batch_size = 128
     dataloader = wiki.get_dataloader(batch_size=batch_size, num_workers=0)

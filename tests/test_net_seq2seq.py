@@ -1,12 +1,13 @@
 # 2023/11/20
 # zhangzhong
 
-from mytorch.data.seq import TimeMachineDataset, TranslationDataManager
-from mytorch.net.rnn import RNNScratch, MyLSTM, MyRNN, MyDeepGRU, MyBiGRU, MyGRU
-from mytorch.net.lm import LanguageModelScratch, LanguageModel
-from mytorch import training, losses, optim
 import torch.nn
-from mytorch.net.seq2seq import Encoder, Decoder, MyEmbedding, Seq2Seq, Seq2SeqLoss
+
+from mytorch import losses, optim, training
+from mytorch.data.seq import TimeMachineDataset, TranslationDataManager
+from mytorch.net.lm import LanguageModel, LanguageModelScratch
+from mytorch.net.rnn import MyBiGRU, MyDeepGRU, MyGRU, MyLSTM, MyRNN, RNNScratch
+from mytorch.net.seq2seq import Decoder, Encoder, MyEmbedding, Seq2Seq, Seq2SeqLoss
 
 
 def test_seq2seq():

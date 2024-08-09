@@ -19,14 +19,14 @@
 #         for param in self.params:
 #             param.grad = None
 
-import torch
-from torch import nn, Tensor
-from typing import Iterator
 import math
-from typing import Iterable
+from typing import Iterable, Iterator
+
+import torch
+from torch import Tensor, nn
 
 # https://pytorch.org/docs/stable/optim.html#base-class
-from torch.optim import Optimizer, SGD
+from torch.optim import SGD, Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
 

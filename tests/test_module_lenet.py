@@ -2,10 +2,11 @@
 # zhangzhong
 
 import torch
-from torch import nn, Tensor
-from module.vision.lenet import LeNet, MyLeNet, BNLeNet
-from mytorch.data.mnist import FashionMNISTDataset
+from torch import Tensor, nn
+
+from module.vision.lenet import BNLeNet, LeNet, MyLeNet
 from mytorch import training
+from mytorch.data.mnist import FashionMNISTDataset
 
 
 def test_MyLeNet():
@@ -25,15 +26,19 @@ def test_MyLeNet():
     mnist = FashionMNISTDataset()
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(params=lenet.parameters(), lr=lr)
-    train_dataloader = mnist.get_train_dataloader(
-        batch_size=batch_size, shuffle=True)
-    val_dataloader = mnist.get_val_dataloader(
-        batch_size=batch_size, shuffle=False)
+    train_dataloader = mnist.get_train_dataloader(batch_size=batch_size, shuffle=True)
+    val_dataloader = mnist.get_val_dataloader(batch_size=batch_size, shuffle=False)
 
-    trainer = training.Trainer(model=lenet, loss_fn=loss_fn, optimizer=optimizer,
-                               num_epochs=epochs, train_dataloader=train_dataloader, val_dataloader=val_dataloader)
+    trainer = training.Trainer(
+        model=lenet,
+        loss_fn=loss_fn,
+        optimizer=optimizer,
+        num_epochs=epochs,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
+    )
 
-    trainer.train(tag='MyLeNet')
+    trainer.train(tag="MyLeNet")
 
 
 def test_LeNet():
@@ -53,15 +58,19 @@ def test_LeNet():
     mnist = FashionMNISTDataset()
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(params=lenet.parameters(), lr=lr)
-    train_dataloader = mnist.get_train_dataloader(
-        batch_size=batch_size, shuffle=True)
-    val_dataloader = mnist.get_val_dataloader(
-        batch_size=batch_size, shuffle=False)
+    train_dataloader = mnist.get_train_dataloader(batch_size=batch_size, shuffle=True)
+    val_dataloader = mnist.get_val_dataloader(batch_size=batch_size, shuffle=False)
 
-    trainer = training.Trainer(model=lenet, loss_fn=loss_fn, optimizer=optimizer,
-                               num_epochs=epochs, train_dataloader=train_dataloader, val_dataloader=val_dataloader)
+    trainer = training.Trainer(
+        model=lenet,
+        loss_fn=loss_fn,
+        optimizer=optimizer,
+        num_epochs=epochs,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
+    )
 
-    trainer.train(tag='MyLeNet')
+    trainer.train(tag="MyLeNet")
 
 
 def test_BNLeNet():
@@ -81,12 +90,16 @@ def test_BNLeNet():
     mnist = FashionMNISTDataset()
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(params=lenet.parameters(), lr=lr)
-    train_dataloader = mnist.get_train_dataloader(
-        batch_size=batch_size, shuffle=True)
-    val_dataloader = mnist.get_val_dataloader(
-        batch_size=batch_size, shuffle=False)
+    train_dataloader = mnist.get_train_dataloader(batch_size=batch_size, shuffle=True)
+    val_dataloader = mnist.get_val_dataloader(batch_size=batch_size, shuffle=False)
 
-    trainer = training.Trainer(model=lenet, loss_fn=loss_fn, optimizer=optimizer,
-                               num_epochs=epochs, train_dataloader=train_dataloader, val_dataloader=val_dataloader)
+    trainer = training.Trainer(
+        model=lenet,
+        loss_fn=loss_fn,
+        optimizer=optimizer,
+        num_epochs=epochs,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
+    )
 
-    trainer.train(tag='MyLeNet')
+    trainer.train(tag="MyLeNet")

@@ -2,13 +2,14 @@
 # zhangzhong
 
 import torch
-from torch import nn, Tensor
-from mytorch.data.wikitext2v2 import WikiText2, WikiText2Sample, Preprocessor
-from mytorch.training import TrainerV2, TrainerV3
-from module.nlp.bert import BERT, BERTLoss, BERTEvaluator
+from torch import Tensor, nn
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+
+from module.nlp.bert import BERT, BERTEvaluator, BERTLoss
 from mytorch import utils
-from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from mytorch.data.seq import VocabularyV3 as Vocabulary
+from mytorch.data.wikitext2v2 import Preprocessor, WikiText2, WikiText2Sample
+from mytorch.training import TrainerV2, TrainerV3
 
 
 def test_train_bert() -> None:
@@ -16,25 +17,26 @@ def test_train_bert() -> None:
     num_workers = 8
     max_len = 64
 
-    preprocessor = Preprocessor(root='datasets/wikitext-2')
-    train_paragraphs = preprocessor(split='train')
-    val_paragraphs = preprocessor(split='valid')
-    test_paragraphs = preprocessor(split='test')
+    preprocessor = Preprocessor(root="datasets/wikitext-2")
+    train_paragraphs = preprocessor(split="train")
+    val_paragraphs = preprocessor(split="valid")
+    test_paragraphs = preprocessor(split="test")
 
-    vocabulary = Vocabulary(text=' '.join([' '.join(paragraph) for paragraph in train_paragraphs]),
-                            reserved_tokens=['<pad>', '<unk>',
-                                             '<bos>', '<eos>', '<cls>', '<seq>'],
-                            min_frequency=5)
+    vocabulary = Vocabulary(
+        text=" ".join([" ".join(paragraph) for paragraph in train_paragraphs]),
+        reserved_tokens=["<pad>", "<unk>", "<bos>", "<eos>", "<cls>", "<seq>"],
+        min_frequency=5,
+    )
 
     train_dataloader = WikiText2(
-        paragraphs=train_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
-        batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        paragraphs=train_paragraphs, max_len=max_len, vocabulary=vocabulary
+    ).get_dataloader(batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_dataloader = WikiText2(
-        paragraphs=val_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
-            batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        paragraphs=val_paragraphs, max_len=max_len, vocabulary=vocabulary
+    ).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_dataloader = WikiText2(
-        paragraphs=test_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
-            batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        paragraphs=test_paragraphs, max_len=max_len, vocabulary=vocabulary
+    ).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     hidden_size = 256
     num_head = 4
@@ -46,7 +48,7 @@ def test_train_bert() -> None:
         max_len=max_len,
         num_head=num_head,
         ffn_hidden_size=ffn_hidden_size,
-        num_blocks=num_blocks
+        num_blocks=num_blocks,
     )
 
     lr: float = 0.1
@@ -56,16 +58,14 @@ def test_train_bert() -> None:
     scheduler = SequentialLR(
         optimizer=optimizer,
         schedulers=[
-            LinearLR(optimizer=optimizer, start_factor=0.1,
-                     total_iters=warmup_epochs),
-            CosineAnnealingLR(optimizer=optimizer,
-                              T_max=num_epochs-warmup_epochs)
+            LinearLR(optimizer=optimizer, start_factor=0.1, total_iters=warmup_epochs),
+            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs - warmup_epochs),
         ],
-        milestones=[warmup_epochs]
+        milestones=[warmup_epochs],
     )
 
     # device = utils.get_device()
-    device = torch.device('cuda:1')
+    device = torch.device("cuda:1")
     trainer = TrainerV2(
         model=model,
         loss_fn=BERTLoss(),
@@ -78,7 +78,7 @@ def test_train_bert() -> None:
         device=device,
     )
 
-    trainer.train(tag='bert_5', summary=False)
+    trainer.train(tag="bert_5", summary=False)
 
 
 def test_train_bert_2() -> None:
@@ -86,25 +86,26 @@ def test_train_bert_2() -> None:
     num_workers = 8
     max_len = 64
 
-    preprocessor = Preprocessor(root='datasets/wikitext-2')
-    train_paragraphs = preprocessor(split='train')
-    val_paragraphs = preprocessor(split='valid')
-    test_paragraphs = preprocessor(split='test')
+    preprocessor = Preprocessor(root="datasets/wikitext-2")
+    train_paragraphs = preprocessor(split="train")
+    val_paragraphs = preprocessor(split="valid")
+    test_paragraphs = preprocessor(split="test")
 
-    vocabulary = Vocabulary(text=' '.join([' '.join(paragraph) for paragraph in train_paragraphs]),
-                            reserved_tokens=['<pad>', '<unk>',
-                                             '<bos>', '<eos>', '<cls>', '<seq>'],
-                            min_frequency=5)
+    vocabulary = Vocabulary(
+        text=" ".join([" ".join(paragraph) for paragraph in train_paragraphs]),
+        reserved_tokens=["<pad>", "<unk>", "<bos>", "<eos>", "<cls>", "<seq>"],
+        min_frequency=5,
+    )
 
     train_dataloader = WikiText2(
-        paragraphs=train_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
-        batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        paragraphs=train_paragraphs, max_len=max_len, vocabulary=vocabulary
+    ).get_dataloader(batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_dataloader = WikiText2(
-        paragraphs=val_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
-            batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        paragraphs=val_paragraphs, max_len=max_len, vocabulary=vocabulary
+    ).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_dataloader = WikiText2(
-        paragraphs=test_paragraphs, max_len=max_len, vocabulary=vocabulary).get_dataloader(
-            batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        paragraphs=test_paragraphs, max_len=max_len, vocabulary=vocabulary
+    ).get_dataloader(batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     hidden_size = 768
     num_head = 12
@@ -116,7 +117,7 @@ def test_train_bert_2() -> None:
         max_len=max_len,
         num_head=num_head,
         ffn_hidden_size=ffn_hidden_size,
-        num_blocks=num_blocks
+        num_blocks=num_blocks,
     )
 
     lr: float = 0.1
@@ -126,17 +127,15 @@ def test_train_bert_2() -> None:
     scheduler = SequentialLR(
         optimizer=optimizer,
         schedulers=[
-            LinearLR(optimizer=optimizer, start_factor=0.1,
-                     total_iters=warmup_epochs),
-            CosineAnnealingLR(optimizer=optimizer,
-                              T_max=num_epochs-warmup_epochs)
+            LinearLR(optimizer=optimizer, start_factor=0.1, total_iters=warmup_epochs),
+            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs - warmup_epochs),
         ],
-        milestones=[warmup_epochs]
+        milestones=[warmup_epochs],
     )
 
     evaluator = BERTEvaluator()
     # device = utils.get_device()
-    device = torch.device('cuda:1')
+    device = torch.device("cuda:1")
     trainer = TrainerV3(
         model=model,
         loss_fn=BERTLoss(),
@@ -147,7 +146,7 @@ def test_train_bert_2() -> None:
         test_dataloader=test_dataloader,
         scheduler=scheduler,
         device=device,
-        evaluator=evaluator
+        evaluator=evaluator,
     )
 
-    trainer.train(tag='bert_6', summary=False)
+    trainer.train(tag="bert_6", summary=False)

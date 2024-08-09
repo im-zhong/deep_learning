@@ -1,8 +1,10 @@
 # 2023/12/14
 # zhangzhong
 
-from mytorch.data.svhn import SVHNDataset
 from torch import Tensor
+
+from mytorch.data.svhn import SVHNDataset
+
 
 def test_svhn():
     svhn = SVHNDataset()

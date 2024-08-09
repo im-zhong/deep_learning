@@ -1,0 +1,11 @@
+black
+isort
+pytest
+torch
+torchvision
+torchaudio
+matplotlib
+tqdm
+torchinfo
+pandas
+ipykernel

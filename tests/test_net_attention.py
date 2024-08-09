@@ -1,12 +1,13 @@
 # 2023/11/20
 # zhangzhong
 
-import torch
-from mytorch.net.attention import DotProductAttention, MaskedDotProductAttention
-import matplotlib.pyplot as plt
-from mytorch import config, func
 import math
-from mytorch import utils
+
+import matplotlib.pyplot as plt
+import torch
+
+from mytorch import config, func, utils
+from mytorch.net.attention import DotProductAttention, MaskedDotProductAttention
 
 
 def test_DotProductAttention():
@@ -17,15 +18,14 @@ def test_DotProductAttention():
     keys = torch.randn(size=(batch_size, seq_size, hidden_size))
     values = keys.clone()
     attention = DotProductAttention()
-    attention_weights, contexts = attention(
-        queries=queries, keys=keys, values=values)
+    attention_weights, contexts = attention(queries=queries, keys=keys, values=values)
     # plt.plot(attention_weights)
     plt.imshow(attention_weights[0])
     # plt.legend()
     # plt.tight_layout()
     plt.colorbar()
     # plt.savefig('attention.png')
-    utils.mysavefig('attention.png')
+    utils.mysavefig("attention.png")
 
 
 def test_MaskedDotProductAttention():
@@ -39,14 +39,15 @@ def test_MaskedDotProductAttention():
     valid_lens = torch.tensor([1, 2, 3, 4]).reshape(shape=(-1, 1))
     attention = MaskedDotProductAttention()
     attention_weights, contexts = attention(
-        queries=queries, keys=keys, values=values, valid_lens=valid_lens)
+        queries=queries, keys=keys, values=values, valid_lens=valid_lens
+    )
     # plt.plot(attention_weights)
     plt.imshow(attention_weights[0])
     # plt.legend()
     # plt.tight_layout()
     plt.colorbar()
     # plt.savefig('attention.png')
-    utils.mysavefig('attention.png')
+    utils.mysavefig("attention.png")
 
 
 # TODO: 我们不能在每个tensor的创建的时候都指定device 我们最终是需要把config文件去掉的
@@ -66,25 +67,23 @@ def test_MaskedDotProductAttention_2():
 
     # case 1: valid_len is None
     valid_lens1 = None
-    qk, _ = attention(queries=queries, keys=keys,
-                      values=values, valid_lens=valid_lens1)
+    qk, _ = attention(queries=queries, keys=keys, values=values, valid_lens=valid_lens1)
     assert qk.shape == (batch_size, query_size, kv_size)
     # qk = qk.cpu()
     plt.imshow(qk[0])
     plt.colorbar()
     # plt.savefig('none.png')
-    utils.mysavefig('none.png')
+    utils.mysavefig("none.png")
 
     # case 2: len(valid_len.shape) = 1
-    valid_lens2 = torch.arange(start=5, end=batch_size+5)
-    qk, _ = attention(queries=queries, keys=keys,
-                      values=values, valid_lens=valid_lens2)
+    valid_lens2 = torch.arange(start=5, end=batch_size + 5)
+    qk, _ = attention(queries=queries, keys=keys, values=values, valid_lens=valid_lens2)
     assert qk.shape == (batch_size, query_size, kv_size)
     # qk = qk.cpu()
     plt.imshow(qk[3])
     plt.colorbar()
     # plt.savefig('source_attention.png')
-    utils.mysavefig('source_attention.png')
+    utils.mysavefig("source_attention.png")
 
     # 感觉应该是对的 但是还是要和ground truth做对比
     X = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(hidden_size)
@@ -93,24 +92,25 @@ def test_MaskedDotProductAttention_2():
     plt.imshow(qk[3])
     plt.colorbar()
     # plt.savefig('gt_source_attention.png')
-    utils.mysavefig('gt_source_attention.png')
+    utils.mysavefig("gt_source_attention.png")
 
     # case 3. len(valid_len.shape) == 2
-    valid_lens3 = torch.arange(
-        start=1, end=query_size+1).reshape(1, -1).repeat(batch_size, 1)
-    qk, _ = attention(queries=queries, keys=keys,
-                      values=values, valid_lens=valid_lens3)
+    valid_lens3 = (
+        torch.arange(start=1, end=query_size + 1).reshape(1, -1).repeat(batch_size, 1)
+    )
+    qk, _ = attention(queries=queries, keys=keys, values=values, valid_lens=valid_lens3)
     assert qk.shape == (batch_size, query_size, kv_size)
     # qk = qk.cpu()
     plt.imshow(qk[3])
     plt.colorbar()
     # plt.savefig('target_attention.png')
-    utils.mysavefig('target_attention.png')
+    utils.mysavefig("target_attention.png")
 
     my_mask = attention.mask.reshape(-1, kv_size)
 
-    valid_lens3 = torch.arange(
-        start=1, end=query_size+1).reshape(1, -1).repeat(batch_size, 1)
+    valid_lens3 = (
+        torch.arange(start=1, end=query_size + 1).reshape(1, -1).repeat(batch_size, 1)
+    )
     # 卧槽 是我的问题！！！
     # mask_softmax会修改X 所以必须要重新计算一次!!!
     # 现在对了！！！
@@ -120,4 +120,4 @@ def test_MaskedDotProductAttention_2():
     plt.imshow(qk[3])
     plt.colorbar()
     # plt.savefig('gt_target_attention.png')
-    utils.mysavefig('gt_target_attention.png')
+    utils.mysavefig("gt_target_attention.png")

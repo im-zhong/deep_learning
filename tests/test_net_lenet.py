@@ -2,12 +2,13 @@
 # zhangzhong
 
 
-from module.vision.lenet import LeNet, BNLeNet
-from mytorch.data.cifar10 import CIFAR10Dataset
-from mytorch.data.mnist import FashionMNISTDataset
-from mytorch import func, training, utils
 import torch.nn
 import torch.optim
+
+from module.vision.lenet import BNLeNet, LeNet
+from mytorch import func, training, utils
+from mytorch.data.cifar10 import CIFAR10Dataset
+from mytorch.data.mnist import FashionMNISTDataset
 
 
 def test_le_net() -> None:
@@ -37,6 +38,7 @@ def test_le_net() -> None:
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         device=utils.get_device(),
-        is_test=False)
+        is_test=False,
+    )
 
-    trainer.train(tag='AlexNet', calculate_accuracy=True)
+    trainer.train(tag="AlexNet", calculate_accuracy=True)

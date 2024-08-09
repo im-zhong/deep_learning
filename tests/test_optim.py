@@ -1,8 +1,9 @@
 # 2023/9/9
 # zhangzhong
 
-from mytorch import optim
 import torch
+
+from mytorch import optim
 
 
 def test_SGD():

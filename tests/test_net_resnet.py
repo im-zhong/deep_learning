@@ -1,19 +1,20 @@
 # 2023/11/26
 # zhangzhong
 
+import json
+
+import torch
+from torch import Tensor, nn
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+from tqdm import tqdm
+
 from module.vision.resnet import ResNet18, SmallResNet18
+from mytorch import training, utils
 
 # import torchsummary  # type: ignore
 from mytorch.data.cifar10 import CIFAR10Dataset, cifar10_predict
+from mytorch.data.mnist import FashionMNISTDataset, MNISTDataset
 from mytorch.data.svhn import SVHNDataset
-import torch
-from mytorch import training, utils
-import json
-from torch import nn, Tensor
-from mytorch import utils
-from tqdm import tqdm
-from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
-from mytorch.data.mnist import MNISTDataset, FashionMNISTDataset
 
 # def test_simple_resnet() -> None:
 #     net = ResNet18()

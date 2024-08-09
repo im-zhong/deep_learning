@@ -4,8 +4,9 @@
 
 import torch
 import torch.nn.functional as F
+from torch import Tensor, nn
+
 from mytorch import func
-from torch import nn, Tensor
 
 # BUG:FIX Ther are plenty of 'cpu or cuda' error
 # we should find a way to handle that

@@ -2,11 +2,12 @@
 # zhangzhong
 
 import torch
-from mytorch.data import linear, mnist
+
 import mytorch.net
-import mytorch.training as training
 import mytorch.optim as optim
+import mytorch.training as training
 from mytorch import losses
+from mytorch.data import linear, mnist
 
 
 def test_LinearRegressionScratch():
