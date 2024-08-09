@@ -10,7 +10,6 @@ from mytorch.net.seq2seq import Encoder, Decoder, MyEmbedding, Seq2Seq, Seq2SeqL
 
 
 def test_seq2seq():
-
     trans = TranslationDataManager()
     source_vocab = trans.source_vocab
     target_vocab = trans.target_vocab
@@ -19,10 +18,18 @@ def test_seq2seq():
     embed_size = 512
     hidden_size = 256
     num_layers = 3
-    encoder = Encoder(vocab_size=len(
-        source_vocab), embed_size=embed_size, hidden_size=hidden_size, num_layers=num_layers)
-    decoder = Decoder(vocab_size=len(
-        target_vocab), embed_size=embed_size, hidden_size=hidden_size, num_layers=num_layers)
+    encoder = Encoder(
+        vocab_size=len(source_vocab),
+        embed_size=embed_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+    )
+    decoder = Decoder(
+        vocab_size=len(target_vocab),
+        embed_size=embed_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+    )
     seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)
 
     batch_size = 32
@@ -35,15 +42,16 @@ def test_seq2seq():
         model=seq2seq,
         # loss_fn=losses.CrossEntropyLoss(),
         loss_fn=Seq2SeqLoss(target_vocab),
-        optimizer=optim.SGD(params=seq2seq.parameters(),
-                            lr=learning_rate, gradient_clip=gradient_clip),
+        optimizer=optim.MySGD(
+            params=seq2seq.parameters(), lr=learning_rate, gradient_clip=gradient_clip
+        ),
         num_epochs=num_epochs,
         train_dataloader=train_dl,
-        val_dataloader=val_dl
+        val_dataloader=val_dl,
     )
 
-    trainer.train(tag='Seq2Seq')
+    trainer.train(tag="Seq2Seq")
 
-    source = 'hello, world!'
+    source = "hello, world!"
     target = seq2seq.predict(trans=trans, prompt=source)
-    print(f'source: {source}, target: {target}')
+    print(f"source: {source}, target: {target}")

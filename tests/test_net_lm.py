@@ -9,7 +9,6 @@ import torch.nn
 
 
 def test_RNNLM():
-
     time_machine = TimeMachineDataset(num_seq=16)
     vocab = time_machine.get_vocabulary()
 
@@ -21,18 +20,20 @@ def test_RNNLM():
     learning_rate = 0.01
     gradient_clip = 1.0
     train_dataloader, val_dataloader = time_machine.get_dataloader(
-        batch_size=batch_size)
+        batch_size=batch_size
+    )
 
     trainer = training.Trainer(
         model=lm,
         loss_fn=losses.CrossEntropyLoss(),
-        optimizer=optim.SGD(params=lm.parameters(),
-                            lr=learning_rate, gradient_clip=gradient_clip),
+        optimizer=optim.MySGD(
+            params=lm.parameters(), lr=learning_rate, gradient_clip=gradient_clip
+        ),
         num_epochs=num_epochs,
         train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader
+        val_dataloader=val_dataloader,
     )
 
-    trainer.train(tag='RNN Scratch')
+    trainer.train(tag="RNN Scratch")
 
-    print(lm.predict('hello', num_seq=10))
+    print(lm.predict("hello", num_seq=10))

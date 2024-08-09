@@ -1,7 +1,9 @@
 # 2023/10/15
 # zhangzhong
 # functional
+
 # 主要是用来写跟模型架构有关的函数
+# TODO: 这个模块里面的东西太多了 应该组织成一个package
 
 # from torch import LongTensor
 from typing import Callable

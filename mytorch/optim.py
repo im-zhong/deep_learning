@@ -1,5 +1,10 @@
 # 2023/9/10
 # zhangzhong
+# https://pytorch.org/docs/stable/optim.html
+# https://pytorch.org/docs/stable/optim.html
+# https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.state_dict.html#torch.optim.Optimizer.state_dict
+# https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.LambdaLR.html#torch.optim.lr_scheduler.LambdaLR
+
 
 # class Optimizer:
 #     def __init__(self, params, lr, weight_decay=None):
@@ -18,6 +23,11 @@ import torch
 from torch import nn, Tensor
 from typing import Iterator
 import math
+from typing import Iterable
+
+# https://pytorch.org/docs/stable/optim.html#base-class
+from torch.optim import Optimizer, SGD
+from torch.optim.lr_scheduler import LRScheduler
 
 
 def magnitude(params: list[Tensor]):
@@ -48,13 +58,15 @@ def grad_clip(params: list[Tensor], clip=1.0):
         if m >= clip:
             for p in params:
                 if p.grad is not None:
-                    p.grad *= (clip / m)
+                    p.grad *= clip / m
 
 
-class SGD():
+class MySGD:
     # params = sequence of tensors
     # 只有这样 我们可以for遍历所有的param，然后使用梯度下降
-    def __init__(self, params: Iterator[Tensor], lr, weight_decay=0.0, gradient_clip=None):
+    def __init__(
+        self, params: Iterator[Tensor], lr, weight_decay=0.0, gradient_clip=None
+    ):
         # why this params is tuple of tuple
         # self.params_it = params
         self.params = list(params)
@@ -101,12 +113,13 @@ class SGD():
                 # 果然是这样！！！
                 # Context-manager that disabled gradient calculation.
                 # Disabling gradient calculation is useful for inference,
-                param *= (1.0 - self.lr * self.weight_decay)
+                param *= 1.0 - self.lr * self.weight_decay
                 param -= self.lr * param.grad
 
     def zero_grad(self):
         for param in self.params:
             param.grad = None
+
 
 # TODO: 实现 grad clip
 # 为什么grad clip 不集成在optimizer里面呢 ?? 这显然是一个极好的位置呀??
@@ -114,27 +127,51 @@ class SGD():
 # 然后再optimizer里面添加一个clip参数即可
 
 
-class OptimizerFactory:
-    def __init__(self, name: str, lr: float):
-        self.name = name
-        self.lr = lr
+# params_t: TypeAlias = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
+# 咱们简化成只考虑 Iterable[torch.Tensor]
+# https://pytorch.org/docs/stable/generated/torch.optim.SGD.html#torch.optim.SGD
+# 参考pytorch的实现
+class MySGDV2(Optimizer):
+    def __init__(
+        self,
+        params: Iterable[Tensor],
+        lr: float,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+        gradient_clip: float = 1.0,
+    ) -> None:
+        pass
+        for param in params:
+            pass
 
-    def new(self, model: nn.Module):
-        # 这里其实应该用反射来构建对象 因为所有的Optimizer的的构造方式都差不太多
-        if self.name == 'MySGD':
-            return SGD(params=model.parameters(), lr=self.lr)
-        elif self.name == 'Adam':
-            return torch.optim.Adam(params=model.parameters(), lr=self.lr)
-        else:
-            assert False, f'not support optimizer {self.name}'
+
+# 感觉其他的优化器都没有实现的必要啊 就是先一个Adam就行了 其他的都太重复了
+class MyAdam(Optimizer):
+    def __init__(self):
+        pass
 
 
-class WarmUpCosineScheduler():
-    def __init__(self, optimizer: SGD, warmup_epochs: int, max_epochs: int):
+class WarmUpCosineScheduler(LRScheduler):
+    def __init__(self, optimizer: Optimizer, warmup_epochs: int, max_epochs: int):
         self.optimizer = optimizer
         self.warmup_epochs = warmup_epochs
         self.max_epochs = max_epochs
         self.current_epoch = 0
 
     def step(self):
+        pass
+
+
+class TransformerScheduler(LRScheduler):
+    def __init__(
+        self, optimizer: Optimizer, warmup_epochs: int, max_epochs: int
+    ) -> None:
+        super().__init__(optimizer)
+        self.optimizer = optimizer
+        self.warmup_epochs = warmup_epochs
+        self.max_epochs = max_epochs
+        self.current_epoch = 0
+        self.step_count = 0
+
+    def step(self) -> None:
         pass

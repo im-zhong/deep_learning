@@ -47,12 +47,12 @@ def test_LinearRegressionScratch():
         # loss也没有问题
         loss_fn=torch.nn.MSELoss(),
         # 很明显 从validation的loss来看 我们没有能够成功的更新参数
-        optimizer=optim.SGD(model.parameters(), lr=0.01),
+        optimizer=optim.MySGD(model.parameters(), lr=0.01),
         num_epochs=20,
         train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader
+        val_dataloader=val_dataloader,
     )
-    trainer.train('ScratchLoss')
+    trainer.train("ScratchLoss")
 
     # 训练完成之后 输出一下模型参数
     # tensor([ 2.0138, -3.3883], requires_grad=True) tensor(4.1900, requires_grad=True)
@@ -80,13 +80,12 @@ def test_pytorch_linear_regression():
         loss_fn=torch.nn.MSELoss(),
         # optimizer的问题
         # model.parameters(): Returns an iterator over module parameters
-        optimizer=torch.optim.SGD(
-            model.parameters(), lr=0.01, weight_decay=0.01),
+        optimizer=torch.optim.SGD(model.parameters(), lr=0.01, weight_decay=0.01),
         num_epochs=20,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
     )
-    trainer.train('PytorchLoss')
+    trainer.train("PytorchLoss")
 
     # tensor([[ 2.0001], [-3.4003]], requires_grad=True) tensor([4.2004], requires_grad=True)
     print(model.parameters())
@@ -156,7 +155,7 @@ def test_linear_classifier_scratch():
     # step 1. Fashison-MNIST
     ds = mnist.FashionMNISTDataset()
     num_labels = 10
-    in_features = 28*28
+    in_features = 28 * 28
 
     # step 2. DataLoader
     batch_size = 32
@@ -165,9 +164,10 @@ def test_linear_classifier_scratch():
 
     # step 3. model
     model = mytorch.net.linear.LinearClassifierScratch(
-        in_features=in_features, out_features=num_labels)
+        in_features=in_features, out_features=num_labels
+    )
     loss_fn = losses.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.MySGD(model.parameters(), lr=0.01)
 
     # step 4. trainer
     num_epochs = 2
@@ -177,16 +177,17 @@ def test_linear_classifier_scratch():
         optimizer=optimizer,
         num_epochs=num_epochs,
         train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader)
+        val_dataloader=val_dataloader,
+    )
 
-    trainer.train(tag='LinearClassifierScratch')
+    trainer.train(tag="LinearClassifierScratch")
 
 
 def test_MLP_scratch():
     # step 1. Fashison-MNIST
     ds = mnist.FashionMNISTDataset()
     num_labels = 10
-    in_features = 28*28
+    in_features = 28 * 28
 
     # step 2. DataLoader
     batch_size = 32
@@ -195,9 +196,15 @@ def test_MLP_scratch():
 
     # step 3. model
     model = mytorch.net.linear.MLPScratch(
-        in_features=in_features, out_features=num_labels, num_hidden_1=256, num_hidden_2=128, dropout_1=0.2, dropout_2=0.1)
+        in_features=in_features,
+        out_features=num_labels,
+        num_hidden_1=256,
+        num_hidden_2=128,
+        dropout_1=0.2,
+        dropout_2=0.1,
+    )
     loss_fn = losses.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.MySGD(model.parameters(), lr=0.01)
 
     # step 4. trainer
     num_epochs = 2
@@ -207,16 +214,17 @@ def test_MLP_scratch():
         optimizer=optimizer,
         num_epochs=num_epochs,
         train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader)
+        val_dataloader=val_dataloader,
+    )
 
-    trainer.train(tag='MLPScratch')
+    trainer.train(tag="MLPScratch")
 
 
 def test_MLP_Pytorch():
     # step 1. Fashison-MNIST
     ds = mnist.FashionMNISTDataset()
     num_labels = 10
-    in_features = 28*28
+    in_features = 28 * 28
 
     # step 2. DataLoader
     batch_size = 32
@@ -225,9 +233,14 @@ def test_MLP_Pytorch():
 
     # step 3. model
     model = mytorch.net.linear.MLP(
-        out_features=num_labels, num_hidden_1=256, num_hidden_2=128, dropout_1=0.2, dropout_2=0.1)
+        out_features=num_labels,
+        num_hidden_1=256,
+        num_hidden_2=128,
+        dropout_1=0.2,
+        dropout_2=0.1,
+    )
     loss_fn = losses.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.MySGD(model.parameters(), lr=0.01)
 
     # step 4. trainer
     num_epochs = 2
@@ -237,6 +250,7 @@ def test_MLP_Pytorch():
         optimizer=optimizer,
         num_epochs=num_epochs,
         train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader)
+        val_dataloader=val_dataloader,
+    )
 
-    trainer.train(tag='MLP', calculate_accuracy=True)
+    trainer.train(tag="MLP", calculate_accuracy=True)

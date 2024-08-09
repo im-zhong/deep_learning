@@ -13,8 +13,12 @@ class NiNBlock(nn.Module):
         self.padding = padding
         self.stride = stride
         self.net = nn.Sequential(
-            nn.LazyConv2d(out_channels=out_channels,
-                          kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.LazyConv2d(
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+            ),
             nn.LazyConv2d(out_channels=out_channels, kernel_size=1),
             nn.LazyConv2d(out_channels=out_channels, kernel_size=1),
             # 这里没有maxpool 因为最后一个conv层用的是avgpool
@@ -30,19 +34,15 @@ class NiN(nn.Module):
         self.net = nn.Sequential(
             NiNBlock(out_channels=96, kernel_size=11, stride=4, padding=0),
             nn.MaxPool2d(kernel_size=3, stride=2),
-
             NiNBlock(out_channels=256, kernel_size=5, stride=1, padding=2),
             nn.MaxPool2d(kernel_size=3, stride=2),
-
             NiNBlock(out_channels=384, kernel_size=3, stride=1, padding=1),
             nn.MaxPool2d(kernel_size=3, stride=2),
-
             nn.Dropout(p=0.5),
-
             # output layer
             NiNBlock(out_channels=1000, kernel_size=3, stride=1, padding=1),
             nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten()
+            nn.Flatten(),
         )
         pass
 

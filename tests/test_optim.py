@@ -13,7 +13,7 @@ def test_SGD():
     # The error message you're seeing is because the optim.SGD function is expecting an argument of type Iterator[Tensor] for its params parameter, but you're providing a list[Tensor].
     # An Iterator[Tensor] is a type that implements the iterator protocol, which requires the __next__ method. A list[Tensor] does not have this method, hence the incompatibility.
     # To fix this, you can convert your list to an iterator using the iter() function:
-    optimizer = optim.SGD(iter([w, b]), lr=0.01)
+    optimizer = optim.MySGD(iter([w, b]), lr=0.01)
     optimizer.zero_grad()
     x = torch.randn((1, 2))
     y_hat = torch.matmul(x, w) + b
@@ -34,7 +34,7 @@ def test_SGD():
 def test_grad_clip():
     w = torch.tensor([2.0, -3.4], requires_grad=True)
     b = torch.tensor(4.2, requires_grad=True)
-    optimizer = optim.SGD(iter([w, b]), lr=0.01)
+    optimizer = optim.MySGD(iter([w, b]), lr=0.01)
     optimizer.zero_grad()
     x = torch.randn((1, 2))
     y_hat = torch.matmul(x, w) + b
@@ -52,10 +52,10 @@ def test_grad_clip():
     # TODO: 如何测试grad的方向没有发生改变呢??
     # 平行，向量叉积为零
     if w.grad is not None:
-        w.grad *= (m / clip)
+        w.grad *= m / clip
         print(w.grad)
     if b.grad is not None:
-        b.grad *= (m / clip)
+        b.grad *= m / clip
         print(b.grad)
 
 
@@ -64,7 +64,7 @@ def test_SGD_with_clip():
     w = torch.tensor([2.0, -3.4], requires_grad=True)
     b = torch.tensor(4.2, requires_grad=True)
 
-    optimizer = optim.SGD(iter([w, b]), lr=0.01, gradient_clip=clip)
+    optimizer = optim.MySGD(iter([w, b]), lr=0.01, gradient_clip=clip)
     optimizer.zero_grad()
     x = torch.randn((1, 2))
     y_hat = torch.matmul(x, w) + b

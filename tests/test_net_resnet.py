@@ -2,6 +2,7 @@
 # zhangzhong
 
 from module.vision.resnet import ResNet18, SmallResNet18
+
 # import torchsummary  # type: ignore
 from mytorch.data.cifar10 import CIFAR10Dataset, cifar10_predict
 from mytorch.data.svhn import SVHNDataset
@@ -21,7 +22,6 @@ from mytorch.data.mnist import MNISTDataset, FashionMNISTDataset
 
 
 def test_small_resnet() -> None:
-
     batch_size = 128
     num_workers = 16
     cifar10 = CIFAR10Dataset(num_workers=num_workers)
@@ -39,13 +39,14 @@ def test_small_resnet() -> None:
     # 实在是太容易过拟合了 数据增强 启动！
     lr: float = 0.1
     num_epochs = 100
-    tag = 'resnet18_2'
+    tag = "resnet18_2"
     net = SmallResNet18()
 
     optimizer = torch.optim.SGD(params=net.parameters(), lr=lr)
     # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=optimizer, T_max=num_epochs)
+        optimizer=optimizer, T_max=num_epochs
+    )
 
     trainer = training.TrainerV2(
         model=net,
@@ -56,12 +57,13 @@ def test_small_resnet() -> None:
         val_dataloader=val_dataloader,
         test_dataloader=test_dataloader,
         scheduler=scheduler,
-        device=utils.get_device())
+        device=utils.get_device(),
+    )
 
     trainer.train(tag=tag)
 
-def test_small_resnet_no_split() -> None:
 
+def test_small_resnet_no_split() -> None:
     batch_size = 128
     num_workers = 16
     cifar10 = CIFAR10Dataset(num_workers=num_workers, splits=[0.99, 0.01])
@@ -79,13 +81,14 @@ def test_small_resnet_no_split() -> None:
     # 实在是太容易过拟合了 数据增强 启动！
     lr: float = 0.1
     num_epochs = 100
-    tag = 'resnet18_4'
+    tag = "resnet18_4"
     net = SmallResNet18()
 
     optimizer = torch.optim.SGD(params=net.parameters(), lr=lr)
     # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=optimizer, T_max=num_epochs)
+        optimizer=optimizer, T_max=num_epochs
+    )
 
     device = utils.get_device()
     trainer = training.TrainerV2(
@@ -97,18 +100,21 @@ def test_small_resnet_no_split() -> None:
         val_dataloader=val_dataloader,
         test_dataloader=test_dataloader,
         scheduler=scheduler,
-        device=device)
+        device=device,
+    )
 
     trainer.train(tag=tag)
 
     # predict
     pretrained_model: nn.Module = trainer.model
-    images = ['imgs/pattern_recognition/J20.jpg',
-              'imgs/pattern_recognition/M7.png',
-              'imgs/pattern_recognition/101.png'
-              ]
+    images = [
+        "imgs/pattern_recognition/J20.jpg",
+        "imgs/pattern_recognition/M7.png",
+        "imgs/pattern_recognition/101.png",
+    ]
     for image in images:
         cifar10_predict(model=pretrained_model, device=device, path=image)
+
 
 def test_small_resnet_on_svhn() -> None:
     batch_size = 128
@@ -119,7 +125,7 @@ def test_small_resnet_on_svhn() -> None:
     val_dataloader = svhn.get_val_dataloader(batch_size=batch_size)
     test_dataloader = svhn.get_test_dataloader(batch_size=batch_size)
 
-    tag = 'resnet18_svhn_6'
+    tag = "resnet18_svhn_6"
     net = SmallResNet18()
 
     lr: float = 0.1
@@ -130,9 +136,9 @@ def test_small_resnet_on_svhn() -> None:
         optimizer=optimizer,
         schedulers=[
             LinearLR(optimizer=optimizer, start_factor=0.1, total_iters=warmup_epochs),
-            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs-warmup_epochs)
+            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs - warmup_epochs),
         ],
-        milestones=[warmup_epochs]
+        milestones=[warmup_epochs],
     )
     device = utils.get_device()
     trainer = training.TrainerV2(
@@ -144,16 +150,19 @@ def test_small_resnet_on_svhn() -> None:
         val_dataloader=val_dataloader,
         test_dataloader=test_dataloader,
         scheduler=scheduler,
-        device=device)
+        device=device,
+    )
 
     trainer.train(tag=tag)
     pretrained_model = trainer.model
 
-    layers = ['net.last.AdaptiveMaxPool2d', 
-              'net.last.LazyLinear1', 
-              'net.last.BatchNorm', 
-              'net.last.ReLU',
-              'net.last.Dropout']
+    layers = [
+        "net.last.AdaptiveMaxPool2d",
+        "net.last.LazyLinear1",
+        "net.last.BatchNorm",
+        "net.last.ReLU",
+        "net.last.Dropout",
+    ]
     hook = utils.RegisterIntermediateOutputHook(model=pretrained_model, layers=layers)
 
     # forward
@@ -161,17 +170,22 @@ def test_small_resnet_on_svhn() -> None:
     for x, y in tqdm(svhn.get_test_dataloader(batch_size=batch_size)):
         x = x.to(device)
         y = pretrained_model(x)
-        
+
         output = hook.get_intermediate_output()
         for layer in layers:
             if layer not in intermediate_outputs:
                 intermediate_outputs[layer] = []
             intermediate_outputs[layer].append(output[layer])
-   
+
     for layer in layers:
         outputs = intermediate_outputs[layer]
         outputs = torch.cat(outputs, dim=0)
-        utils.draw_tsne(data=outputs, labels=svhn.test_dataset.labels, name=f'tsne_{layer}_resnet18_svhn_3.png')
+        utils.draw_tsne(
+            data=outputs,
+            labels=svhn.test_dataset.labels,
+            name=f"tsne_{layer}_resnet18_svhn_3.png",
+        )
+
 
 def small_resnet_tsne_impl(dataset, tag: str, device, data, labels, train_data) -> None:
     batch_size = 128
@@ -189,9 +203,9 @@ def small_resnet_tsne_impl(dataset, tag: str, device, data, labels, train_data) 
         optimizer=optimizer,
         schedulers=[
             LinearLR(optimizer=optimizer, start_factor=0.1, total_iters=warmup_epochs),
-            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs-warmup_epochs)
+            CosineAnnealingLR(optimizer=optimizer, T_max=num_epochs - warmup_epochs),
         ],
-        milestones=[warmup_epochs]
+        milestones=[warmup_epochs],
     )
 
     trainer = training.TrainerV2(
@@ -203,25 +217,27 @@ def small_resnet_tsne_impl(dataset, tag: str, device, data, labels, train_data) 
         val_dataloader=val_dataloader,
         test_dataloader=test_dataloader,
         scheduler=scheduler,
-        device=device)
+        device=device,
+    )
 
     trainer.train(tag=tag)
     pretrained_model = trainer.model
 
-    layers = ['net.last.AdaptiveMaxPool2d', 
-              'net.last.LazyLinear1', 
-              'net.last.BatchNorm', 
-              'net.last.ReLU',
-              # 'net.last.Dropout'
-              ]
+    layers = [
+        "net.last.AdaptiveMaxPool2d",
+        "net.last.LazyLinear1",
+        "net.last.BatchNorm",
+        "net.last.ReLU",
+        # 'net.last.Dropout'
+    ]
     hook = utils.RegisterIntermediateOutputHook(model=pretrained_model, layers=layers)
-    
+
     # # forward
     intermediate_outputs: dict[str, list[Tensor]] = {}
     for x, y in tqdm(dataset.get_test_dataloader(batch_size=batch_size)):
         x = x.to(device)
         y = pretrained_model(x)
-        
+
         output = hook.get_intermediate_output()
         for layer in layers:
             if layer not in intermediate_outputs:
@@ -238,49 +254,57 @@ def small_resnet_tsne_impl(dataset, tag: str, device, data, labels, train_data) 
     # 不行 不能从dataloader中拿图片 因为那样是随机的 我们不知道这张图片到底是那个index
     # images, labels = next(iter(train_dataloader))
     # assert images.shape == (batch_size, 3, 32, 32)
-    
-    
+
     image = train_data[train_index][0].unsqueeze(0).to(device)
     y = pretrained_model(image)
-    output = hook.get_intermediate_output()['net.last.ReLU']
+    output = hook.get_intermediate_output()["net.last.ReLU"]
     # 然后我们和整个测试的fc1的输出计算出他们的欧氏距离
     # 然后取top5
-    test_fc1_output = intermediate_outputs['net.last.ReLU']
+    test_fc1_output = intermediate_outputs["net.last.ReLU"]
     test_fc1_output = torch.concat(test_fc1_output, dim=0)
-    norms = torch.linalg.vector_norm(test_fc1_output - output, ord=2, dim=1) 
+    norms = torch.linalg.vector_norm(test_fc1_output - output, ord=2, dim=1)
     assert norms.shape == (10000,)
     values, indicies = (-norms).topk(k=5)
     print(-values, indicies)
 
 
 def test_small_resnet_tsne_on_mnist():
-    mnist=MNISTDataset(num_workers=8)
-    small_resnet_tsne_impl(dataset=mnist, 
-                           tag='resnet_tsne_mnist_1', 
-                           device=torch.device('cuda:0'),
-                           data=mnist.testing_data.data,
-                           labels=mnist.testing_data.targets,
-                           train_data=mnist.training_data)
+    mnist = MNISTDataset(num_workers=8)
+    small_resnet_tsne_impl(
+        dataset=mnist,
+        tag="resnet_tsne_mnist_1",
+        device=torch.device("cuda:0"),
+        data=mnist.testing_data.data,
+        labels=mnist.testing_data.targets,
+        train_data=mnist.training_data,
+    )
+
 
 def test_small_resnet_tsne_on_fashion_mnist():
     fashion_mnist = FashionMNISTDataset(num_workers=8)
-    small_resnet_tsne_impl(dataset=fashion_mnist, 
-                           tag='resnet_tsne_fashion_mnist_1', 
-                           device=torch.device('cuda:1'),
-                           data=fashion_mnist.testing_data.data,
-                           labels=fashion_mnist.testing_data.targets,
-                           train_data=fashion_mnist.training_data)
-    
+    small_resnet_tsne_impl(
+        dataset=fashion_mnist,
+        tag="resnet_tsne_fashion_mnist_1",
+        device=torch.device("cuda:1"),
+        data=fashion_mnist.testing_data.data,
+        labels=fashion_mnist.testing_data.targets,
+        train_data=fashion_mnist.training_data,
+    )
+
+
 def test_small_resnet_tsne_on_cifar10():
     # 我笑了，根本就分不开啊，怪不得正确率上不去，resnet18对于这个问题来说太浅了，应该在深一点
     # 比如resnet110, 但是我现在就不浪费时间去训练了，该谢谢论文搞BERT了
     cifar10 = CIFAR10Dataset(num_workers=8)
-    small_resnet_tsne_impl(dataset=cifar10, 
-                           tag='resnet_tsne_cifar10_2', 
-                           device=torch.device('cuda:2'),
-                           data=torch.tensor(cifar10.cifar_test.data),
-                           labels=torch.tensor(cifar10.cifar_test.targets),
-                           train_data=cifar10.cifar_train)
+    small_resnet_tsne_impl(
+        dataset=cifar10,
+        tag="resnet_tsne_cifar10_2",
+        device=torch.device("cuda:2"),
+        data=torch.tensor(cifar10.cifar_test.data),
+        labels=torch.tensor(cifar10.cifar_test.targets),
+        train_data=cifar10.cifar_train,
+    )
+
 
 def test_json():
     result = training.Result()
@@ -295,9 +319,9 @@ def test_json():
 
 def test_pytorch() -> None:
     if torch.cuda.is_available():
-        print('cuda is avaliable')
+        print("cuda is avaliable")
     else:
-        print('cuda is not avaliable')
+        print("cuda is not avaliable")
 
 
 def test_tsne() -> None:
@@ -319,13 +343,14 @@ def test_tsne() -> None:
     # 实在是太容易过拟合了 数据增强 启动！
     lr: float = 0.1
     num_epochs = 0
-    tag = 'resnet18_svhn_2'
+    tag = "resnet18_svhn_2"
     net = SmallResNet18()
 
     optimizer = torch.optim.SGD(params=net.parameters(), lr=lr)
     # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=optimizer, T_max=num_epochs)
+        optimizer=optimizer, T_max=num_epochs
+    )
 
     device = utils.get_device()
     trainer = training.TrainerV2(
@@ -337,15 +362,16 @@ def test_tsne() -> None:
         val_dataloader=val_dataloader,
         test_dataloader=test_dataloader,
         scheduler=scheduler,
-        device=device)
+        device=device,
+    )
 
-    trainer.train(tag=tag)    
-    
+    trainer.train(tag=tag)
+
     model = trainer.model
     # 模型的输出是什么？
     # 我们随便拿一张图片
     # 然后看看这个图片的输出是什么
-    
+
     # 从训练集中随机选取一张图片
     image = svhn.train_dataset[0][0]
     print(image.shape)
@@ -354,4 +380,3 @@ def test_tsne() -> None:
     image = image.to(device)
     y = model(image)
     print(y.shape)
-    

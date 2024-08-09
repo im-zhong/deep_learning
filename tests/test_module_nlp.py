@@ -17,10 +17,19 @@ def test_seq2seqwithattention():
     embed_size = 512
     hidden_size = 256
     num_layers = 3
-    encoder = AttentionEncoder(vocab_size=len(
-        source_vocab), embed_size=embed_size, hidden_size=hidden_size, num_layers=num_layers, vocab=source_vocab)
-    decoder = AttentionDecoder(vocab_size=len(
-        target_vocab), embed_size=embed_size, hidden_size=hidden_size, num_layers=num_layers)
+    encoder = AttentionEncoder(
+        vocab_size=len(source_vocab),
+        embed_size=embed_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+        vocab=source_vocab,
+    )
+    decoder = AttentionDecoder(
+        vocab_size=len(target_vocab),
+        embed_size=embed_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+    )
     seq2seq = Seq2Seq(encoder=encoder, decoder=decoder)  # type: ignore
 
     batch_size = 32
@@ -33,15 +42,16 @@ def test_seq2seqwithattention():
         model=seq2seq,
         # loss_fn=losses.CrossEntropyLoss(),
         loss_fn=Seq2SeqLoss(target_vocab),
-        optimizer=optim.SGD(params=seq2seq.parameters(),
-                            lr=learning_rate, gradient_clip=gradient_clip),
+        optimizer=optim.MySGD(
+            params=seq2seq.parameters(), lr=learning_rate, gradient_clip=gradient_clip
+        ),
         num_epochs=num_epochs,
         train_dataloader=train_dl,
-        val_dataloader=val_dl
+        val_dataloader=val_dl,
     )
 
-    trainer.train(tag='Seq2Seq')
+    trainer.train(tag="Seq2Seq")
 
-    source = 'hello, world!'
+    source = "hello, world!"
     target = seq2seq.predict(trans=trans, prompt=source)
-    print(f'source: {source}, target: {target}')
+    print(f"source: {source}, target: {target}")

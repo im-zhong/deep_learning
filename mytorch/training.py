@@ -9,6 +9,7 @@
 
 from dataclasses import dataclass
 from tqdm import tqdm
+
 # import torch.utils.tensorboard as tb
 from torch.utils.tensorboard.writer import SummaryWriter
 import torch
@@ -34,8 +35,22 @@ from mytorch.metrics import Evaluator, Metrics
 class Trainer:
     """The base class for training models with data."""
 
-    def __init__(self, *, model, loss_fn, optimizer, num_epochs, train_dataloader, val_dataloader, scheduler=None, num_gpus=0, gradient_clip_val=0, is_test: bool = True, device: device = torch.device('cpu')):
-        assert num_gpus == 0, 'No GPU support yet'
+    def __init__(
+        self,
+        *,
+        model,
+        loss_fn,
+        optimizer,
+        num_epochs,
+        train_dataloader,
+        val_dataloader,
+        scheduler=None,
+        num_gpus=0,
+        gradient_clip_val=0,
+        is_test: bool = True,
+        device: device = torch.device("cpu"),
+    ):
+        assert num_gpus == 0, "No GPU support yet"
         # 用这个函数 类型检查系统会complain 所以还是不要用了
         # 你也不知道你引进来了什么
         # self.make_parameters_be_attributes()
@@ -49,7 +64,7 @@ class Trainer:
         self.num_gpus = num_gpus
         self.gradient_clip_val = gradient_clip_val
         self.writer = SummaryWriter()
-        self.model_file_prefix = 'snapshots'
+        self.model_file_prefix = "snapshots"
         self.is_test = is_test
         self.max_batch: int = 10
 
@@ -89,7 +104,7 @@ class Trainer:
     #         self.fit_epoch()
 
     def cross_entropy_accuracy(self, logits: Tensor, labels: Tensor) -> tuple[int, int]:
-        '''
+        """
         logits: shape = (batch_size, num_labels)
         labels: shape = (batch_size,)
 
@@ -98,7 +113,7 @@ class Trainer:
 
         step 2: 然后和labels进行比较 predict_labels == labels
         为了最后计算的准确率，我们需要返回判断准确的样本的个数 最后由外部累计所有的batch的和，然后再计算准确率
-        '''
+        """
         batch_size, num_labels = logits.shape
         predict_labels = torch.argmax(logits, dim=1)
         # torch.sum(): Returns the sum of all elements in the input tensor.
@@ -117,7 +132,6 @@ class Trainer:
     #     raise NotImplementedError
     # TODO: 我们希望training可以自动保存
     def train(self, tag, calculate_accuracy: bool = False):
-
         # send model parameters to device
         # TODO: 不太确定如果我的参数不使用 torch.Parameter来定义的话 能不能正确的被to(device)呢??
         # 目前看来是不能的，还是得用torch.Parameter来定义
@@ -189,16 +203,18 @@ class Trainer:
                     val_losses += loss
 
                     if calculate_accuracy:
-                        accuracy, num_batch = self.cross_entropy_accuracy(
-                            y_hat, y)
+                        accuracy, num_batch = self.cross_entropy_accuracy(y_hat, y)
                         accuracyes += accuracy
                         num_examples += num_batch
 
-            tag_scalar_dict = {'train': float(train_losses) / len(self.train_dataloader),
-                               'val': val_losses / len(self.val_dataloader)}
+            tag_scalar_dict = {
+                "train": float(train_losses) / len(self.train_dataloader),
+                "val": val_losses / len(self.val_dataloader),
+            }
             if calculate_accuracy:
                 tag_scalar_dict.update(
-                    {'accuracy': float(accuracyes) / float(num_examples)})
+                    {"accuracy": float(accuracyes) / float(num_examples)}
+                )
             self.writer.add_scalars(tag, tag_scalar_dict, epoch)
 
             # 不行 必须每个epoch结束都保存一下我的模型 我才安心
@@ -236,43 +252,44 @@ class Result(Metrics):
         # train: Metrics => train_
         # 然后Metrics本身可以转成dict
         result = {}
-        result['epoch'] = self.epoch
-        result.update(
-            {f'train_{k}': v for k, v in self.train.to_dict().items()})
-        result.update({f'val_{k}': v for k, v in self.val.to_dict().items()})
-        result.update({f'test_{k}': v for k, v in self.test.to_dict().items()})
+        result["epoch"] = self.epoch
+        result.update({f"train_{k}": v for k, v in self.train.to_dict().items()})
+        result.update({f"val_{k}": v for k, v in self.val.to_dict().items()})
+        result.update({f"test_{k}": v for k, v in self.test.to_dict().items()})
         return result
 
     @staticmethod
     def from_dict(d: dict) -> "Result":
         result = Result()
-        result.epoch = d['epoch']
-        result.train.from_dict({k[6:]: v for k, v in d.items() if k.startswith(
-            'train_')})
-        result.val.from_dict({k[4:]: v for k, v in d.items() if k.startswith(
-            'val_')})
-        result.test.from_dict({k[5:]: v for k, v in d.items() if k.startswith(
-            'test_')})
+        result.epoch = d["epoch"]
+        result.train.from_dict(
+            {k[6:]: v for k, v in d.items() if k.startswith("train_")}
+        )
+        result.val.from_dict({k[4:]: v for k, v in d.items() if k.startswith("val_")})
+        result.test.from_dict({k[5:]: v for k, v in d.items() if k.startswith("test_")})
         return result
 
 
 # TODO：改名为ClassificationTrainer
 class TrainerV2:
-    '''
-        only for pytorch's model, only for cross entropy
-    '''
+    """
+    only for pytorch's model, only for cross entropy
+    """
 
-    def __init__(self, *,
-                 model: Module,
-                 loss_fn: Module,
-                 optimizer: Optimizer,
-                 num_epochs: int,
-                 train_dataloader: DataLoader,
-                 val_dataloader: DataLoader,
-                 test_dataloader: DataLoader,
-                 scheduler: LRScheduler | None = None,
-                 device: device = torch.device('cpu'),
-                 prefix: str = 'snapshots') -> None:
+    def __init__(
+        self,
+        *,
+        model: Module,
+        loss_fn: Module,
+        optimizer: Optimizer,
+        num_epochs: int,
+        train_dataloader: DataLoader,
+        val_dataloader: DataLoader,
+        test_dataloader: DataLoader,
+        scheduler: LRScheduler | None = None,
+        device: device = torch.device("cpu"),
+        prefix: str = "snapshots",
+    ) -> None:
         self.num_epochs = num_epochs
         self.model = model
         self.loss_fn = loss_fn
@@ -286,26 +303,27 @@ class TrainerV2:
         self.device = device
 
     def summary(self, tag: str) -> None:
-        with open(file=self.summary_path(tag=tag), mode='w') as fp:
+        with open(file=self.summary_path(tag=tag), mode="w") as fp:
             self.model.eval()
             fp.write(str(self.model))
-            fp.write('\n\n')
+            fp.write("\n\n")
             x, _ = next(iter(self.train_dataloader))
             stats = torchinfo.summary(
-                model=self.model, input_size=x.shape, device='cpu')
+                model=self.model, input_size=x.shape, device="cpu"
+            )
             fp.write(str(stats))
 
     def folder_path(self, tag: str) -> str:
         return os.path.join(self.prefix, tag)
 
     def model_path(self, tag: str) -> str:
-        return os.path.join(self.folder_path(tag=tag), f'{tag}.model')
+        return os.path.join(self.folder_path(tag=tag), f"{tag}.model")
 
     def result_path(self, tag: str) -> str:
-        return os.path.join(self.folder_path(tag=tag), f'{tag}.json')
+        return os.path.join(self.folder_path(tag=tag), f"{tag}.json")
 
     def summary_path(self, tag: str) -> str:
-        return os.path.join(self.folder_path(tag=tag), f'{tag}.summary')
+        return os.path.join(self.folder_path(tag=tag), f"{tag}.summary")
 
     def load_model(self, tag: str) -> nn.Module:
         path = self.model_path(tag=tag)
@@ -321,7 +339,7 @@ class TrainerV2:
         file = self.result_path(tag=tag)
         results: list[Result] = []
         if os.path.exists(file):
-            with open(file=file, mode='r') as fp:
+            with open(file=file, mode="r") as fp:
                 for d in json.loads(s=fp.read()):
                     results.append(Result.from_dict(d=d))
         return results
@@ -333,12 +351,12 @@ class TrainerV2:
     def save_result(self, tag: str, result: Result) -> None:
         results = self.open_results(tag=tag)
         results.append(result)
-        with open(file=self.result_path(tag=tag), mode='w') as fp:
+        with open(file=self.result_path(tag=tag), mode="w") as fp:
             text: list[dict] = [result.to_dict() for result in results]
             fp.write(json.dumps(obj=text, indent=4))
 
     def accuracy_batch(self, logits: Any, labels: Any) -> tuple[int, int]:
-        '''
+        """
         logits: shape = (batch_size, num_labels)
         labels: shape = (batch_size,)
 
@@ -347,7 +365,7 @@ class TrainerV2:
 
         step 2: 然后和labels进行比较 predict_labels == labels
         为了最后计算的准确率，我们需要返回判断准确的样本的个数 最后由外部累计所有的batch的和，然后再计算准确率
-        '''
+        """
         # TODO: 都怪BERT bert一次训练有两个任务 所以理论上应该有两个accuracy
         # 但是现在先不考虑这个了
         # logits是什么
@@ -357,16 +375,19 @@ class TrainerV2:
             mlm_mask = logits.mlm_mask
             assert isinstance(labels, WikiText2Label)
             mlm_labels = labels.mlm
-            nsp_accuracy, nsp_batch_size = self.accuracy_batch(
-                logits.nsp, labels.nsp)
+            nsp_accuracy, nsp_batch_size = self.accuracy_batch(logits.nsp, labels.nsp)
             # mlm_accuracy, mlm_batch_size = self.accuracy_batch(
             #     logits.mlm, labels.mlm.flatten())
             # 卧槽 太麻烦了 mlm的正确率还要剔除一部分元素
             mlm_predict_labels = logits.mlm.argmax(dim=1)
             mlm_batch_size, _ = logits.mlm.shape
             # TODO: 直接在二维上计算代码还可以再简单一点，参考李沐的实现
-            mlm_accuracy = int(((mlm_predict_labels == labels.mlm.flatten()
-                                 ).int() * logits.mlm_mask.flatten()).sum())
+            mlm_accuracy = int(
+                (
+                    (mlm_predict_labels == labels.mlm.flatten()).int()
+                    * logits.mlm_mask.flatten()
+                ).sum()
+            )
             mlm_batch_size = int(mlm_mask.sum())
             return nsp_accuracy + mlm_accuracy, nsp_batch_size + mlm_batch_size
 
@@ -390,7 +411,8 @@ class TrainerV2:
         # or logging it in a NumPy array will trigger a global interpreter lock which stalls all GPUs
         # so we need to compute and store the loss on GPU!
         training_loss: Tensor = torch.tensor(
-            data=0, dtype=torch.float32, device=self.device)
+            data=0, dtype=torch.float32, device=self.device
+        )
 
         x: Tensor
         y: Tensor
@@ -420,8 +442,7 @@ class TrainerV2:
     def eval_epoch(self, dataloader: DataLoader) -> tuple[float, float, float, float]:
         # set to evaluation mode
         self.model.eval()
-        val_loss: Tensor = torch.tensor(
-            data=0, dtype=torch.float32, device=self.device)
+        val_loss: Tensor = torch.tensor(data=0, dtype=torch.float32, device=self.device)
         # TODO: this may hurt performance, do some tests, if it hurts performance, move it to gpu
         accuracy: int = 0
         num_examples: int = 0
@@ -441,8 +462,7 @@ class TrainerV2:
                 loss: Tensor = self.loss_fn(y_hat, y)
                 val_loss += loss
                 # calculate accuracy, only for cross entropy loss, classification
-                accuracy_batch, num_batch = self.accuracy_batch(
-                    logits=y_hat, labels=y)
+                accuracy_batch, num_batch = self.accuracy_batch(logits=y_hat, labels=y)
                 # TODO: 有朝一日再打开 傻逼BERT啊
                 # top1_errors_batch, top5_errors_batch, _ = self.error_rate_batch(
                 #     logits=y_hat, labels=y)
@@ -450,7 +470,12 @@ class TrainerV2:
                 # top1_errors += top1_errors_batch
                 # top5_errors += top5_errors_batch
                 num_examples += num_batch
-        return float(val_loss / len(dataloader)), float(accuracy) / float(num_examples), float(top1_errors) / float(num_examples), float(top5_errors) / float(num_examples)
+        return (
+            float(val_loss / len(dataloader)),
+            float(accuracy) / float(num_examples),
+            float(top1_errors) / float(num_examples),
+            float(top5_errors) / float(num_examples),
+        )
 
     def train(self, tag: str, summary: bool = True) -> None:
         # 1. 判断 snapshots/{tag} 文件夹是否存在，如果不存在则创建
@@ -465,30 +490,38 @@ class TrainerV2:
 
         for epoch in range(self.num_epochs):
             train_loss = self.train_epoch(self.train_dataloader)
-            _, train_accuracy, _, _ = self.eval_epoch(
-                dataloader=self.train_dataloader)
-            val_loss, val_accuracy, val_top1_error_rate, val_top5_error_rate = self.eval_epoch(
-                self.val_dataloader)
-            test_loss, test_accuracy, test_top1_error_rate, test_top5_error_rate = self.eval_epoch(
-                self.test_dataloader)
+            _, train_accuracy, _, _ = self.eval_epoch(dataloader=self.train_dataloader)
+            (
+                val_loss,
+                val_accuracy,
+                val_top1_error_rate,
+                val_top5_error_rate,
+            ) = self.eval_epoch(self.val_dataloader)
+            (
+                test_loss,
+                test_accuracy,
+                test_top1_error_rate,
+                test_top5_error_rate,
+            ) = self.eval_epoch(self.test_dataloader)
 
             # TODO：为了更加通用，可以给没有返回值的默认为零，然后我们在add_scalars的时候在去掉这些零
             # write training result to tensorboard
             tag_scalar_dict = {
-                'epoch': epoch,
-                'train_loss': train_loss,
-                'val_loss': val_loss,
-                'test_loss': test_loss,
-                'train_accuracy': train_accuracy,
-                'val_accuracy': val_accuracy,
-                'test_accuracy': test_accuracy,
-                'val_top1_error_rate': val_top1_error_rate,
-                'val_top5_error_rate': val_top5_error_rate,
-                'test_top1_error_rate': test_top1_error_rate,
-                'test_top5_error_rate': test_top5_error_rate
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "test_loss": test_loss,
+                "train_accuracy": train_accuracy,
+                "val_accuracy": val_accuracy,
+                "test_accuracy": test_accuracy,
+                "val_top1_error_rate": val_top1_error_rate,
+                "val_top5_error_rate": val_top5_error_rate,
+                "test_top1_error_rate": test_top1_error_rate,
+                "test_top5_error_rate": test_top5_error_rate,
             }
             self.writer.add_scalars(
-                main_tag=tag, tag_scalar_dict=tag_scalar_dict, global_step=epoch)
+                main_tag=tag, tag_scalar_dict=tag_scalar_dict, global_step=epoch
+            )
 
             # save model based on result
             result = Result.from_dict(d=tag_scalar_dict)
@@ -496,22 +529,25 @@ class TrainerV2:
 
 
 class TrainerV3:
-    '''
-        only for pytorch's model, only for cross entropy
-    '''
+    """
+    only for pytorch's model, only for cross entropy
+    """
 
-    def __init__(self, *,
-                 model: Module,
-                 loss_fn: Module,
-                 optimizer: Optimizer,
-                 evaluator: Evaluator,
-                 num_epochs: int,
-                 train_dataloader: DataLoader,
-                 val_dataloader: DataLoader,
-                 test_dataloader: DataLoader,
-                 scheduler: LRScheduler | None = None,
-                 device: device = torch.device('cpu'),
-                 prefix: str = 'snapshots') -> None:
+    def __init__(
+        self,
+        *,
+        model: Module,
+        loss_fn: Module,
+        optimizer: Optimizer,
+        evaluator: Evaluator,
+        num_epochs: int,
+        train_dataloader: DataLoader,
+        val_dataloader: DataLoader,
+        test_dataloader: DataLoader,
+        scheduler: LRScheduler | None = None,
+        device: device = torch.device("cpu"),
+        prefix: str = "snapshots",
+    ) -> None:
         self.num_epochs = num_epochs
         self.model = model
         self.loss_fn = loss_fn
@@ -526,26 +562,27 @@ class TrainerV3:
         self.evaluator = evaluator
 
     def summary(self, tag: str) -> None:
-        with open(file=self.summary_path(tag=tag), mode='w') as fp:
+        with open(file=self.summary_path(tag=tag), mode="w") as fp:
             self.model.eval()
             fp.write(str(self.model))
-            fp.write('\n\n')
+            fp.write("\n\n")
             x, _ = next(iter(self.train_dataloader))
             stats = torchinfo.summary(
-                model=self.model, input_size=x.shape, device='cpu')
+                model=self.model, input_size=x.shape, device="cpu"
+            )
             fp.write(str(stats))
 
     def folder_path(self, tag: str) -> str:
         return os.path.join(self.prefix, tag)
 
     def model_path(self, tag: str) -> str:
-        return os.path.join(self.folder_path(tag=tag), f'{tag}.model')
+        return os.path.join(self.folder_path(tag=tag), f"{tag}.model")
 
     def result_path(self, tag: str) -> str:
-        return os.path.join(self.folder_path(tag=tag), f'{tag}.json')
+        return os.path.join(self.folder_path(tag=tag), f"{tag}.json")
 
     def summary_path(self, tag: str) -> str:
-        return os.path.join(self.folder_path(tag=tag), f'{tag}.summary')
+        return os.path.join(self.folder_path(tag=tag), f"{tag}.summary")
 
     def load_model(self, tag: str) -> nn.Module:
         path = self.model_path(tag=tag)
@@ -561,7 +598,7 @@ class TrainerV3:
         file = self.result_path(tag=tag)
         results: list[Result] = []
         if os.path.exists(file):
-            with open(file=file, mode='r') as fp:
+            with open(file=file, mode="r") as fp:
                 for d in json.loads(s=fp.read()):
                     results.append(Result.from_dict(d=d))
         return results
@@ -573,7 +610,7 @@ class TrainerV3:
     def save_result(self, tag: str, result: Result) -> None:
         results = self.open_results(tag=tag)
         results.append(result)
-        with open(file=self.result_path(tag=tag), mode='w') as fp:
+        with open(file=self.result_path(tag=tag), mode="w") as fp:
             text: list[dict] = [result.to_dict() for result in results]
             fp.write(json.dumps(obj=text, indent=4))
 
@@ -584,7 +621,8 @@ class TrainerV3:
         # or logging it in a NumPy array will trigger a global interpreter lock which stalls all GPUs
         # so we need to compute and store the loss on GPU!
         training_loss: Tensor = torch.tensor(
-            data=0, dtype=torch.float32, device=self.device)
+            data=0, dtype=torch.float32, device=self.device
+        )
 
         x: Tensor
         y: Tensor
@@ -649,10 +687,12 @@ class TrainerV3:
 
             # TODO：为了更加通用，可以给没有返回值的默认为零，然后我们在add_scalars的时候在去掉这些零
             # write training result to tensorboard
-            result = Result(epoch=epoch, train=train_metrics,
-                            val=val_metrics, test=test_metrics)
+            result = Result(
+                epoch=epoch, train=train_metrics, val=val_metrics, test=test_metrics
+            )
             self.writer.add_scalars(
-                main_tag=tag, tag_scalar_dict=result.to_dict(), global_step=epoch)
+                main_tag=tag, tag_scalar_dict=result.to_dict(), global_step=epoch
+            )
 
             # save model based on result
             self.save_model(tag=tag, result=result)

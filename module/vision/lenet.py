@@ -16,7 +16,6 @@ class MyLeNet(nn.Module):
             nn.Sigmoid(),
             # downsampling: 2x2 AvgPool2d, stride = 2
             MyAvgPool2d(in_channels=6, kernel_size=2, stride=2),
-
             # conv layer2
             # 5x5 Conv(6, 16)
             MyConv2d(in_channels=6, out_channels=16, kernel_size=5),
@@ -24,20 +23,16 @@ class MyLeNet(nn.Module):
             nn.Sigmoid(),
             # downsampling: 2x2 AvgPool2d, stride = 2
             MyAvgPool2d(in_channels=16, kernel_size=2, stride=2),
-
             # now the output shape is (b, c, h, w), but fc layer can only accept (b, f)
             # so we just flatten it
             nn.Flatten(start_dim=1, end_dim=-1),
-
             # Dense Block, fc layer1
             nn.LazyLinear(out_features=120),
             # activation
             nn.Sigmoid(),
-
             # fc layer2
             nn.LazyLinear(out_features=84),
             nn.Sigmoid(),
-
             # fc layer3
             nn.LazyLinear(out_features=10),
         )
@@ -62,7 +57,6 @@ class LeNet(nn.Module):
             # downsampling: 2x2 AvgPool2d, stride = 2
             # MyAvgPool2d(in_channels=6, kernel_size=2, stride=2),
             nn.AvgPool2d(kernel_size=2, stride=2),
-
             # conv layer2
             # 5x5 Conv(6, 16)
             # MyConv2d(in_channels=6, out_channels=16, kernel_size=5),
@@ -72,20 +66,16 @@ class LeNet(nn.Module):
             # downsampling: 2x2 AvgPool2d, stride = 2
             # MyAvgPool2d(in_channels=16, kernel_size=2, stride=2),
             nn.AvgPool2d(kernel_size=2, stride=2),
-
             # now the output shape is (b, c, h, w), but fc layer can only accept (b, f)
             # so we just flatten it
             nn.Flatten(start_dim=1, end_dim=-1),
-
             # Dense Block, fc layer1
             nn.LazyLinear(out_features=120),
             # activation
             nn.Sigmoid(),
-
             # fc layer2
             nn.LazyLinear(out_features=84),
             nn.Sigmoid(),
-
             # fc layer3
             nn.LazyLinear(out_features=10),
         )
@@ -112,7 +102,6 @@ class BNLeNet(nn.Module):
             # downsampling: 2x2 AvgPool2d, stride = 2
             # MyAvgPool2d(in_channels=6, kernel_size=2, stride=2),
             nn.MaxPool2d(kernel_size=2, stride=2),
-
             # conv layer2
             # 5x5 Conv(6, 16)
             # MyConv2d(in_channels=6, out_channels=16, kernel_size=5),
@@ -123,22 +112,18 @@ class BNLeNet(nn.Module):
             # downsampling: 2x2 AvgPool2d, stride = 2
             # MyAvgPool2d(in_channels=16, kernel_size=2, stride=2),
             nn.MaxPool2d(kernel_size=2, stride=2),
-
             # now the output shape is (b, c, h, w), but fc layer can only accept (b, f)
             # so we just flatten it
             nn.Flatten(start_dim=1, end_dim=-1),
-
             # Dense Block, fc layer1
             nn.LazyLinear(out_features=120),
             nn.LazyBatchNorm1d(),
             # activation
             nn.ReLU(),
-
             # fc layer2
             nn.LazyLinear(out_features=84),
             nn.LazyBatchNorm1d(),
             nn.ReLU(),
-
             # fc layer3
             nn.LazyLinear(out_features=10),
         )
