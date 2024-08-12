@@ -2,11 +2,12 @@
 # zhangzhong
 
 
-import matplotlib.pyplot as plt
 import os.path
-import torch
-from torch import device, Tensor, nn
 import random
+
+import matplotlib.pyplot as plt
+import torch
+from torch import Tensor, device, nn
 from tsnecuda import TSNE
 
 

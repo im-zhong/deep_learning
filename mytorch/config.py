@@ -2,7 +2,7 @@
 # zhangzhong
 # global config
 
-conf = {
+conf: dict[str, bool] = {
     # 'device': 'cuda:3',
     "predict": False,
 }

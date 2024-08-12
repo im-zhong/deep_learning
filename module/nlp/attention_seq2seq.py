@@ -29,7 +29,7 @@ class AttentionEncoder(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.vocab = vocab
-        self.embedding = MyEmbedding(vocab_size, embed_size)
+        self.embedding = MyEmbedding(vocab_size=vocab_size, embed_size=embed_size)
         self.rnn = MyDeepGRU(
             input_size=embed_size, hidden_size=hidden_size, num_layers=num_layers
         )
