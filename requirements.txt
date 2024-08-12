@@ -10,3 +10,4 @@ torchinfo
 pandas
 ipykernel
 tensorboard
+gym
