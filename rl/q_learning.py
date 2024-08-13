@@ -12,16 +12,16 @@ env = gym.make(
     id="FrozenLake-v1",
     # desc=["SFFF", "FHFH", "FFFH", "HFFG"],
     # desc=["SFHF", "HFFF", "GHHF", "FFFF"],
-    # desc=[
-    #     "SFFFFFFF",
-    #     "FFFFFFFF",
-    #     "FFFHHFFF",
-    #     "FFFHGHFF",
-    #     "FFFHFFFF",
-    #     "FHHFFFHF",
-    #     "FHFFHFHF",
-    #     "FFFHFFFH",
-    # ],
+    desc=[
+        "SFFFFFFF",
+        "FFFFFFFF",
+        "FFFHHFFF",
+        "FFFHGHFF",
+        "FFFHFFFF",
+        "FHHFFFHF",
+        "FHFFHFHF",
+        "FFFHFFFH",
+    ],
     # map_name="8x8",
     is_slippery=False,
     # render_mode="human",
@@ -42,8 +42,15 @@ V = np.zeros(shape=(state_count))
 pi = np.zeros(shape=(state_count), dtype=np.int32)
 
 learning_rate = 0.9
+# 下面两个参数同时调整为0.99，同时增加iteration之后，我们就能解出来了8*8的地图
+# TIP ，不行，必须两者同时调整为0.99
+# 我们必须更加具有冒险精神，所以我们必须增加epsilon
+# TMD，突然有不行了，调回0.9就又ok了。。。
 epsilon = 0.9
-discount_factor = 0.95
+# TIP
+# 对于一个8*8的地图，我们增加了discount_factor之后，就能解出来了
+# 说明对于一个较大的问题，我们需要更多的步数，显然就需要对步数惩罚小一些
+discount_factor = 0.99
 
 
 def epsilon_greedy_policy(state):
@@ -105,16 +112,16 @@ env = gym.make(
     id="FrozenLake-v1",
     # desc=["SFFF", "FHFH", "FFFH", "HFFG"],
     # desc=["SFHF", "HFFF", "GHHF", "FFFF"],
-    # desc=[
-    #     "SFFFFFFF",
-    #     "FFFFFFFF",
-    #     "FFFHHFFF",
-    #     "FFFHGHFF",
-    #     "FFFHFFFF",
-    #     "FHHFFFHF",
-    #     "FHFFHFHF",
-    #     "FFFHFFFH",
-    # ],
+    desc=[
+        "SFFFFFFF",
+        "FFFFFFFF",
+        "FFFHHFFF",
+        "FFFHGHFF",
+        "FFFHFFFF",
+        "FHHFFFHF",
+        "FHFFHFHF",
+        "FFFHFFFH",
+    ],
     # map_name="8x8",
     is_slippery=False,
     render_mode="human",
