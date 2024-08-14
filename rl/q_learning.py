@@ -3,7 +3,7 @@
 
 import random
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 seed = np.random.randint(low=1000, high=100000)

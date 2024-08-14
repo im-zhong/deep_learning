@@ -2,7 +2,7 @@
 # zhangzhong
 # https://www.gymlibrary.dev/environments/toy_text/frozen_lake/
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 seed = np.random.randint(low=1000, high=100000)

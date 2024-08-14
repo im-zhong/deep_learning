@@ -2,7 +2,7 @@
 # zhangzhong
 # https://www.gymlibrary.dev/content/basic_usage/
 
-import gym
+import gymnasium as gym
 
 env = gym.make(id="LunarLander-v2", render_mode="human")
 env.action_space.seed(seed=42)

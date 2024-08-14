@@ -10,4 +10,5 @@ torchinfo
 pandas
 ipykernel
 tensorboard
-gym
+gymnasium
+tsnecuda
