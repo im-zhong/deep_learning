@@ -95,12 +95,13 @@ target_net = DQN(
 batch_size: int = 128
 greedy_rate: float = 0.9
 replay_memory = ReplayMemory(capacity=10000)
-discount_factor: float = 0.9
+discount_factor: float = 0.99
 learning_rate: float = 0.001
 tau: float = 0.01
 
 optimizer = Adam(params=policy_net.parameters(), lr=learning_rate)
-criterion = nn.MSELoss()
+# criterion = nn.MSELoss()
+criterion = nn.SmoothL1Loss()
 
 
 def step():
@@ -202,7 +203,8 @@ def step():
     optimizer.zero_grad()
     loss.backward()
     # 然后我们更新参数
-
+    # In-place gradient clipping
+    torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
 
@@ -228,6 +230,11 @@ def episode() -> int:
         # 这里我们采取一个随机策略
         # 震惊了呀，step一次只能做一个动作，那我们怎么获得多个transition呢?
         next_observation, reward, done = cart_pole.step(action=action)
+
+        # 这里有两个bug
+        # BUG
+        # BUG #1: 只有terminated的时候，next_state才是None， 另外一个状态是truncated，表示超过了预设的最大步数，而不是真正到达了终止状态
+        # BUG #2: 我们忘了切换到下一个状态
 
         # 将transition存入replay memory中
         replay_memory.push(
@@ -262,6 +269,10 @@ def episode() -> int:
         # load_state_dict: Copy parameters and buffers from state_dict into this module and its descendants.
         target_net.load_state_dict(state_dict=target_net_state_dict)
 
+        if next_observation is None:
+            break
+        observation = next_observation
+
     return cart_pole.score
 
 
@@ -270,7 +281,7 @@ def train():
     # make target_net.weight = policy_net.weight
     target_net.load_state_dict(state_dict=policy_net.state_dict())
 
-    max_episodes = 1000
+    max_episodes = 500
     for i in range(max_episodes):
         score = episode()
         print(f"Episode {i}: {score}")
