@@ -165,3 +165,4 @@ snapshots/
 runs/
 imgs/
 .idea/
+.DS_Store

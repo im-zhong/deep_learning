@@ -14,17 +14,16 @@ from . import data
 
 
 class Vocabulary:
-    def __init__(self, raw_text: str, reserved_tokens=['<unk>']):
+    def __init__(self, raw_text: str, reserved_tokens=["<unk>"]):
         # 1. preprocess, 去掉标点符号，转换为小写
-        self.text: str = re.sub('[^A-Za-z]+', ' ', raw_text).lower()
+        self.text: str = re.sub("[^A-Za-z]+", " ", raw_text).lower()
 
         # 2. tokennize, 将单词拆分成单个字母
         self.tokens: list[str] = reserved_tokens + list(self.text)
 
         # 3. 建立: index -> token, token -> index 的映射
         self.idx_to_token = list(set(self.tokens))
-        self.token_to_idx = {token: idx for idx,
-                             token in enumerate(self.idx_to_token)}
+        self.token_to_idx = {token: idx for idx, token in enumerate(self.idx_to_token)}
         self.corpus = self.build_corpus()
 
     def __len__(self):
@@ -50,8 +49,7 @@ class Vocabulary:
         len_seq = len(prompt)
         # Vocabulary不应该做onehot
         # 这一步应该在LM里面做 内聚性更高
-        input = torch.tensor([self.to_index(token)
-                             for token in prompt]).reshape(-1, 1)
+        input = torch.tensor([self.to_index(token) for token in prompt]).reshape(-1, 1)
         assert input.shape == (len_seq, 1)
         embedding = F.one_hot(input, vocab_size).float()
         assert embedding.shape == (len_seq, 1, vocab_size)
@@ -65,10 +63,10 @@ class TimeMachineDataset(data.DataManager):  # 继承DataModule蛋用没有
         # 因为这个类的设计不存在通用性，所以直接给出文件路径更为简单
         # TODO:
         self.num_seq = num_seq
-        filename = 'datasets/timemachine/timemachine.txt'
+        filename = "datasets/timemachine/timemachine.txt"
         self.filename = filename
 
-        with open(self.filename, encoding='utf-8') as f:
+        with open(self.filename, encoding="utf-8") as f:
             self.raw_text = f.read()
         self.vocab = Vocabulary(self.raw_text)
         self.tokens: list[str] = self.vocab.tokens
@@ -122,27 +120,38 @@ class TimeMachineDataset(data.DataManager):  # 继承DataModule蛋用没有
 
     def get_dataset(self, ratio: float = 0.7):
         if not self.initialized:
-            subseqs = torch.tensor([self.corpus[i: i + self.num_seq + 1]
-                                   for i in range(len(self.corpus) - self.num_seq)])
+            subseqs = torch.tensor(
+                [
+                    self.corpus[i : i + self.num_seq + 1]
+                    for i in range(len(self.corpus) - self.num_seq)
+                ]
+            )
             # num_subseqs: int = subseqs.shape[0]
             # 70% 作为 train，30% 作为 val
-            indicies = torch.split(torch.arange(
-                0, len(subseqs)), int(0.7 * len(subseqs)))
+            indicies = torch.split(
+                torch.arange(0, len(subseqs)), int(0.7 * len(subseqs))
+            )
             train_indicies = indicies[0]
             val_indicies = indicies[1]
             self.train_dataset = data.Dataset(
-                x=subseqs[train_indicies, :-1], y=subseqs[train_indicies, 1:])
+                x=subseqs[train_indicies, :-1], y=subseqs[train_indicies, 1:]
+            )
             self.val_dataset = data.Dataset(
-                x=subseqs[val_indicies, :-1], y=subseqs[val_indicies, 1:])
+                x=subseqs[val_indicies, :-1], y=subseqs[val_indicies, 1:]
+            )
             self.initialized = True
         # return train_dataset, val_dataset
 
-    def get_dataloader(self, batch_size: int) -> tuple[data.DataLoaderV2, data.DataLoaderV2]:
+    def get_dataloader(
+        self, batch_size: int
+    ) -> tuple[data.DataLoaderV2, data.DataLoaderV2]:
         # train_dataset, val_dataset = self.get_dataset()
         train_dataloader = data.DataLoaderV2(
-            datamgr=self, tag='train', batch_size=batch_size, shuffle=True)
+            datamgr=self, tag="train", batch_size=batch_size, shuffle=True
+        )
         val_dataloader = data.DataLoaderV2(
-            datamgr=self, tag='val', batch_size=batch_size, shuffle=False)
+            datamgr=self, tag="val", batch_size=batch_size, shuffle=False
+        )
         return train_dataloader, val_dataloader
 
 
@@ -152,9 +161,9 @@ def preprocess_english(raw_text: list[str]) -> list[str]:
         # r'' stand for raw string, usually use in regex
         # () stand for match group, \1 will match the first group
         # 找到[]内部的所有符号，并且在其前后插入空格
-        line = re.sub(r'([?.!,"])', r' \1 ', line)
+        line = re.sub(r'([?.!,"])', r" \1 ", line)
         # 将所有连续的空格替换为一个空格
-        line = re.sub(r'[ ]+', ' ', line)
+        line = re.sub(r"[ ]+", " ", line)
         # strip: Return a copy of the string with leading and trailing whitespace removed.
         line = line.lower().strip()
         text.append(line)
@@ -167,14 +176,20 @@ def preprocess_chinese(raw_text: list[str]) -> list[str]:
         # 中文就在每个符号中间插入空格即可
         # 现在不需要加bos 在后面加
         # line = '<bos> ' + line
-        line = ' '.join(line)
+        line = " ".join(line)
         line = line.lower().strip()
         text.append(line)
     return text
 
 
 class VocabularyV2:
-    def __init__(self, text: list[str], reversed_tokens: list[str] = ['<pad>', '<bos>', '<eos>', '<unk>'], min_frequency: int = 2, is_target: bool = False):
+    def __init__(
+        self,
+        text: list[str],
+        reversed_tokens: list[str] = ["<pad>", "<bos>", "<eos>", "<unk>"],
+        min_frequency: int = 2,
+        is_target: bool = False,
+    ):
         # example:
         # text -> token
         # "hello ." -> ["hello" '.' '<eos>']
@@ -184,7 +199,7 @@ class VocabularyV2:
         # 不应该在这里加eos 否则下面统计词频会加到里面
         # self.tokenized_text: list[list[str]] = [
         #     f'{line} <eos>'.split(' ') for line in text]
-        self.tokenized_text = [line.split(' ') for line in text]
+        self.tokenized_text = [line.split(" ") for line in text]
 
         # 统计词频
         # 统计所有的token
@@ -208,17 +223,19 @@ class VocabularyV2:
             assert token not in filtered_tokens
 
         # token -> index
-        self.index_to_token: list[str] = reversed_tokens + \
-            list(filtered_tokens)
+        self.index_to_token: list[str] = reversed_tokens + list(filtered_tokens)
         self.token_to_index: dict[str, int] = {
-            token: index for index, token in enumerate(self.index_to_token)}
+            token: index for index, token in enumerate(self.index_to_token)
+        }
         # print(self.index_to_token)
         # print(self.token_to_index)
 
         self.corpus: list[list[int]] = self.build_corpus(is_target)
 
     def to_token(self, index: int) -> str:
-        return self.index_to_token[index] if index < len(self.index_to_token) else '<unk>'
+        return (
+            self.index_to_token[index] if index < len(self.index_to_token) else "<unk>"
+        )
 
     def to_index(self, token: str) -> int:
         return self.token_to_index.get(token, self.unk())
@@ -228,18 +245,23 @@ class VocabularyV2:
     # output: list[list[int]]
     def tokenize(self, prompt: str) -> list[list[int]]:
         text = preprocess_english([prompt])
-        text = [line.split(' ') for line in text]  # type: ignore
-        return [[self.to_index(token) for token in line] + [self.eos()]
-                for line in text]
+        text = [line.split(" ") for line in text]  # type: ignore
+        return [
+            [self.to_index(token) for token in line] + [self.eos()] for line in text
+        ]
 
     def build_corpus(self, is_target: bool) -> list[list[int]]:
         # 我们在这里处理对于 bos eos的增加
         if is_target:
-            return [[self.bos()] + [self.to_index(token) for token in line] + [self.eos()]
-                    for line in self.tokenized_text]
+            return [
+                [self.bos()] + [self.to_index(token) for token in line] + [self.eos()]
+                for line in self.tokenized_text
+            ]
         else:
-            return [[self.to_index(token) for token in line] + [self.eos()]
-                    for line in self.tokenized_text]
+            return [
+                [self.to_index(token) for token in line] + [self.eos()]
+                for line in self.tokenized_text
+            ]
 
     def __len__(self):
         return len(self.index_to_token)
@@ -248,23 +270,25 @@ class VocabularyV2:
         return self.token_to_index[token]
 
     def bos(self) -> int:
-        return self['<bos>']
+        return self["<bos>"]
 
     def eos(self) -> int:
-        return self['<eos>']
+        return self["<eos>"]
 
     def unk(self) -> int:
-        return self['<unk>']
+        return self["<unk>"]
 
     def pad(self) -> int:
-        return self['<pad>']
+        return self["<pad>"]
 
     def to_string(self, indicies: list[int]) -> str:
         result = [self.to_token(index) for index in indicies]
-        return ''.join(result)
+        return "".join(result)
 
 
-def dynamic_padding(seqs: list[list[int]],  max_length: int, vocab: VocabularyV2) -> Tensor:
+def dynamic_padding(
+    seqs: list[list[int]], max_length: int, vocab: VocabularyV2
+) -> Tensor:
     # 我们不应该修改seqs，因为seqs会包含对原始数据集的引用
     # 我们应该创建新的aligned_seqs
     ctx_max_length: int = max_length
@@ -273,7 +297,7 @@ def dynamic_padding(seqs: list[list[int]],  max_length: int, vocab: VocabularyV2
     # 第一步 先简单的实现，不考虑max_length
     max_length = min(ctx_max_length, max([len(seq) for seq in seqs]))
     max_len = max_length
-    padding = ctx_vocab.to_index('<pad>')
+    padding = ctx_vocab.to_index("<pad>")
     # # 将所有长度小于max_length的seq都补上一个特殊的符号: '<pad>'
     # for i, seq in enumerate(aligned_seqs):
     #     if len(seq) < max_length:
@@ -294,9 +318,10 @@ def dynamic_padding(seqs: list[list[int]],  max_length: int, vocab: VocabularyV2
     #         aligned_seqs[i] = seq[:max_length]
 
     # list comprehension 会创建新的副本 就不需要我们显式的调用deepcopy了
-    aligned_seqs = [seq[:max_len] if len(seq) > max_len
-                    else seq + [padding]*(max_len-len(seq))
-                    for seq in seqs]
+    aligned_seqs = [
+        seq[:max_len] if len(seq) > max_len else seq + [padding] * (max_len - len(seq))
+        for seq in seqs
+    ]
 
     # 检查所有的sequence的长度都等于 max_length
     for seq in aligned_seqs:
@@ -309,7 +334,9 @@ def dynamic_padding(seqs: list[list[int]],  max_length: int, vocab: VocabularyV2
 
 
 class DynamicPadding:
-    def __init__(self, source_vocab: VocabularyV2, target_vocab: VocabularyV2, max_len: int):
+    def __init__(
+        self, source_vocab: VocabularyV2, target_vocab: VocabularyV2, max_len: int
+    ):
         # self.vocab = vocab
         self.source_vocab = source_vocab
         self.target_vocab = target_vocab
@@ -319,10 +346,8 @@ class DynamicPadding:
         # return dynamic_padding(seqs, self.max_len, self.vocab)
         source, target = seqs
 
-        padded_source = dynamic_padding(
-            source, self.max_len, self.source_vocab)
-        padded_target = dynamic_padding(
-            target, self.max_len, self.target_vocab)
+        padded_source = dynamic_padding(source, self.max_len, self.source_vocab)
+        padded_target = dynamic_padding(target, self.max_len, self.target_vocab)
         return padded_source, padded_target[:, :-1], padded_target[:, 1:]
 
 
@@ -347,6 +372,7 @@ class TranslationDataset(data.Dataset):
         source = [self.source[i] for i in self.shuffle_indicies[indicies]]
         target = [self.target[i] for i in self.shuffle_indicies[indicies]]
         return source, target
+
     # def data(self):
     #     return self.source, self.target, self.label
 
@@ -359,8 +385,7 @@ class TranslationDataset(data.Dataset):
         # seed = random.random()
         # random.shuffle(self.source, seed)
         # random.shuffle(self.target, seed)
-        self.shuffle_indicies = random.sample(
-            list(range(len(self))), len(self))
+        self.shuffle_indicies = random.sample(list(range(len(self))), len(self))
 
 
 class TranslationDataManager(data.DataManager):
@@ -368,14 +393,14 @@ class TranslationDataManager(data.DataManager):
         super().__init__()
         # under the pytest, this file should be found at the root dir
         # so we could download it and put it in the data/ folder
-        self.filename = 'datasets/translation/cmn.txt'
+        self.filename = "datasets/translation/cmn.txt"
         self.source: list[str] = []
         self.target: list[str] = []
         self.initialized = False
 
-        with open(self.filename, encoding='utf-8') as f:
+        with open(self.filename, encoding="utf-8") as f:
             for line in f:
-                seqs = line.split('\t')
+                seqs = line.split("\t")
                 self.source.append(seqs[0])
                 self.target.append(seqs[1])
 
@@ -406,17 +431,31 @@ class TranslationDataManager(data.DataManager):
             # val_indicies = indicies[1]
             split = int(0.7 * len(self.source_corpus))
             self.train_dataset = TranslationDataset(
-                source=self.source_corpus[:split], target=self.target_corpus[:split])
+                source=self.source_corpus[:split], target=self.target_corpus[:split]
+            )
             self.val_dataset = TranslationDataset(
-                source=self.source_corpus[split:], target=self.target_corpus[split:])
+                source=self.source_corpus[split:], target=self.target_corpus[split:]
+            )
             self.initialized = True
 
-    def get_dataloader(self, batch_size: int) -> tuple[data.DataLoaderV2, data.DataLoaderV2]:
+    def get_dataloader(
+        self, batch_size: int
+    ) -> tuple[data.DataLoaderV2, data.DataLoaderV2]:
         # train_dataset, val_dataset = self.get_dataset()
         train_dataloader = data.DataLoaderV2(
-            datamgr=self, tag='train', batch_size=batch_size, shuffle=True, data_collator=DynamicPadding(self.source_vocab, self.target_vocab, 128))
+            datamgr=self,
+            tag="train",
+            batch_size=batch_size,
+            shuffle=True,
+            data_collator=DynamicPadding(self.source_vocab, self.target_vocab, 128),
+        )
         val_dataloader = data.DataLoaderV2(
-            datamgr=self, tag='val', batch_size=batch_size, shuffle=False, data_collator=DynamicPadding(self.source_vocab, self.target_vocab, 128))
+            datamgr=self,
+            tag="val",
+            batch_size=batch_size,
+            shuffle=False,
+            data_collator=DynamicPadding(self.source_vocab, self.target_vocab, 128),
+        )
         return train_dataloader, val_dataloader
 
     def get_train_dataset(self) -> data.Dataset:
@@ -429,8 +468,19 @@ class TranslationDataManager(data.DataManager):
 
 
 class VocabularyV3:
-    def __init__(self, text: str, reserved_tokens: list[str] = ['<pad>', '<unk>', '<bos>', '<eos>', '<cls>', '<seq>'],
-                 min_frequency: int = 5):
+    def __init__(
+        self,
+        text: str,
+        reserved_tokens: list[str] = [
+            "<pad>",
+            "<unk>",
+            "<bos>",
+            "<eos>",
+            "<cls>",
+            "<seq>",
+        ],
+        min_frequency: int = 5,
+    ):
         # self.text = text
         self.reserved_tokens = reserved_tokens
         # self.min_frequency = min_frequency
@@ -443,8 +493,8 @@ class VocabularyV3:
 
         # filter by min_frequency
         filtered_tokens = {
-            token for token, frequency in tokens.items()
-            if frequency >= min_frequency}
+            token for token, frequency in tokens.items() if frequency >= min_frequency
+        }
 
         # 保证reversed_tokens都不在filtered_tokens中
         for token in reserved_tokens:
@@ -452,16 +502,18 @@ class VocabularyV3:
                 filtered_tokens.remove(token)
 
         # token -> index
-        self.index_to_token: list[str] = reserved_tokens + \
-            list(filtered_tokens)
+        self.index_to_token: list[str] = reserved_tokens + list(filtered_tokens)
         self.token_to_index: dict[str, int] = {
-            token: index for index, token in enumerate(self.index_to_token)}
+            token: index for index, token in enumerate(self.index_to_token)
+        }
 
     def to_token(self, index: int) -> str:
-        return self.index_to_token[index] if index < len(self.index_to_token) else '<unk>'
+        return (
+            self.index_to_token[index] if index < len(self.index_to_token) else "<unk>"
+        )
 
     def to_index(self, token: str) -> int:
-        return self.token_to_index.get(token, self.token_to_index['<unk>'])
+        return self.token_to_index.get(token, self.token_to_index["<unk>"])
 
     def __len__(self):
         return len(self.index_to_token)
@@ -473,22 +525,22 @@ class VocabularyV3:
         return self.index_to_token[index]
 
     def pad(self) -> int:
-        return self.to_index('<pad>')
+        return self.to_index("<pad>")
 
     def cls(self) -> int:
-        return self.to_index('<cls>')
+        return self.to_index("<cls>")
 
     def bos(self) -> int:
-        return self.to_index('<bos>')
+        return self.to_index("<bos>")
 
     def eos(self) -> int:
-        return self.to_index('<eos>')
+        return self.to_index("<eos>")
 
     def unk(self) -> int:
-        return self.to_index('<unk>')
+        return self.to_index("<unk>")
 
     def seq(self) -> int:
-        return self.to_index('<seq>')
+        return self.to_index("<seq>")
 
     def is_special_token(self, token: str) -> bool:
         return token in self.reserved_tokens

@@ -2,7 +2,8 @@
 # zhangzhong
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
+
 from mytorch import func
 
 
@@ -29,13 +30,20 @@ class Conv2dBatchNorm(nn.Module):
     def forward(self, input: Tensor) -> Tensor:
         batch_size, channels, height, width = input.shape
         if self.gamma is None:
-            self.gamma = nn.Parameter(torch.ones(
-                size=(1, channels, 1, 1), device=input.device, requires_grad=True))
-            self.beta = nn.Parameter(torch.zeros(
-                size=(1, channels, 1, 1), device=input.device, requires_grad=True))
+            self.gamma = nn.Parameter(
+                torch.ones(
+                    size=(1, channels, 1, 1), device=input.device, requires_grad=True
+                )
+            )
+            self.beta = nn.Parameter(
+                torch.zeros(
+                    size=(1, channels, 1, 1), device=input.device, requires_grad=True
+                )
+            )
 
         output = func.conv2d_batch_norm(
-            input=input, gamma=self.gamma, beta=self.beta)  # type: ignore
+            input=input, gamma=self.gamma, beta=self.beta
+        )  # type: ignore
         return output
 
 
@@ -58,4 +66,5 @@ class AddNorm(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, input: Tensor, output: Tensor) -> Tensor:
+        # TODO: 感觉这里的实现好像和论文里面不一样？确认一下
         return self.ln(input + self.dropout(output))
