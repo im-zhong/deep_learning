@@ -4,4 +4,4 @@ version = "0.1.0"
 description = "My Deep Learning Codes"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
-dependencies = []
+dependencies = ["peft>=0.15.2"]
