@@ -1,25 +1,43 @@
 # 2025/7/2
 # zhangzhong
 # https://huggingface.co/docs/peft/quicktour
+# 这个chat给出了两种模型微调在数据处理上的对比
+# https://chat.deepseek.com/a/chat/s/e2c9e0b6-d57d-4c8a-b7cc-8c122e58a377
 
 
 # Train
 # Each PEFT method is defined by a PeftConfig class that stores all the important parameters for building a PeftModel.
 from peft import LoraConfig, TaskType
 from transformers import (
-    AutoModelForSeq2SeqLM,
     AutoTokenizer,
-    Seq2SeqTrainingArguments,
-    Seq2SeqTrainer,
-    DataCollatorForSeq2Seq,
+    # Causal LM
+    # 好像默认的Arguments和Trainer就是为了CausalLM设计的？
+    TrainingArguments,
+    Trainer,
+    AutoModelForCausalLM,
+    DataCollatorForLanguageModeling,
+    BitsAndBytesConfig,  # for quantization
+    #
+    # seq2seq
+    # AutoModelForSeq2SeqLM,
+    # Seq2SeqTrainingArguments,
+    # Seq2SeqTrainer,
+    # DataCollatorForSeq2Seq,
 )
 from peft import get_peft_model
 from datasets import load_dataset
 import evaluate
 import numpy as np
 
-dataset = load_dataset("wmt16", "ro-en")
-model_name = "bigscience/mt0-large"
+# https://discuss.pytorch.org/t/bfloat16-native-support/117155/6
+# check this link and show 3090 support bf16
+
+# dataset = load_dataset("wmt16", "ro-en")
+# https://chat.deepseek.com/a/chat/s/dd253749-8ac5-4a65-9c49-6e3c60916ab3
+# https://huggingface.co/datasets/yahma/alpaca-cleaned
+dataset = load_dataset("yahma/alpaca-cleaned")
+
+model_name = "meta-llama/Llama-3.1-8B-Instruct"
 # Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct/resolve/main/config.json.
 # Access to model meta-llama/Llama-3.1-8B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in.
 # 用llama的模型还得先登录
@@ -34,7 +52,39 @@ model_name = "bigscience/mt0-large"
 # Access to model meta-llama/Llama-3.1-8B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct to ask for access.
 # model_name = "meta-llama/Llama-3.1-8B-Instruct"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+# LLaMA and many open models:
+# 	•	Do not have a default pad token.
+# 	•	They were trained with the End-of-Sequence (eos_token) as their only special token.
+#  End-of-Sequence token (which the model knows) as padding.
+tokenizer.pad_token = tokenizer.eos_token  # Very important for causal LM
+
+
+# 原来这样配置就成了QLoRA了
+# quantization
+bnb_config = BitsAndBytesConfig(
+    # 4-bit quantization saves memory on the model side
+    # Model Weights 4-bit quantized
+    load_in_4bit=True,
+    # Set precision of forward/backward computation
+    # gradient, computation, optimizer is in floating point
+    bnb_4bit_compute_dtype="bfloat16",  # or bfloat16 if you card supports it, >=A100, 3090
+    # QLoRA quantization
+    # double quantization.
+    bnb_4bit_use_double_quant=True,
+    # This selects the quantization algorithm.
+    # default is fp4, regular 4bit floating point
+    # nf4 stands for NormalFloat4, which is a special 4-bit floating-point format introduced in the QLoRA paper.
+    bnb_4bit_quant_type="nf4",
+)
+
+
+# Since Llama is a causal/decoder-only model, use AutoModelForCausalLM:
+# TODO: 咱们先不做量化加载试一下，毕竟咱们有四张3090
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,  # QLoRA quantization
+    device_map="auto",
+)
 
 
 # TODO: read the lora paper
@@ -102,50 +152,32 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 # tokenizer(inputs, max_length=128, truncation=True, padding=False)
 
 
-def preprocess_function(examples):
-    inputs = [ex["en"] for ex in examples["translation"]]
-    targets = [ex["ro"] for ex in examples["translation"]]
-
-    model_inputs = tokenizer(
-        inputs,
-        max_length=128,
-        truncation=True,
-        padding=False,  # Dynamic padding to longest in batch (set to False for no padding during preprocessing
-    )
-
-    # tokenizer.as_target_tokenizer() is crucial for seq2seq models because:
-    # Some tokenizers behave differently for source vs target text
-    # For T5/mT5 models, it ensures proper handling of decoder inputs
-    # It may add special tokens or handle BOS/EOS tokens differently
-    with tokenizer.as_target_tokenizer():
-        labels = tokenizer(
-            targets,
-            max_length=128,
-            truncation=True,
-            padding=False,  # Dynamic padding to longest in batch
-        )
-
-    model_inputs["labels"] = labels["input_ids"]
-    return model_inputs
+def preprocess_function(example):
+    # 把
+    if example["input"]:
+        return f"### Instruction:\n{example['instruction']}\n\n### Input:\n{example['input']}\n\n### Response:\n\n{example['output']}"
+    else:
+        return f"### Instruction:\n{example['instruction']}\n\n### Response:\n\n{example['output']}"
 
 
 # tokenize dataset
 tokenized_datasets = dataset.map(
-    preprocess_function,
+    lambda x: {"text": preprocess_function(x)},
     batched=True,
-    remove_columns=dataset["train"].column_names,  # remove original columns
+    # remove_columns=dataset["train"].column_names,  # remove original columns
     # remove_columns=["translation"],  # or you can specify the column to remove
-    desc="Running tokenizer on dataset",
+    # desc="Running tokenizer on dataset",
     load_from_cache_file=True,
 )
 
 
 peft_config = LoraConfig(
-    task_type=TaskType.SEQ_2_SEQ_LM,
+    task_type=TaskType.CAUSAL_LM,
     inference_mode=False,
     r=8,
-    lora_alpha=32,
-    lora_dropout=0.1,
+    lora_alpha=16,
+    lora_dropout=0.05,
+    target_modules=["q_proj", "v_proj"],  # For LLaMA, these are common
 )
 
 model = get_peft_model(model, peft_config)
@@ -154,63 +186,56 @@ model.print_trainable_parameters()
 
 # Data collator
 # for dynamic padding
-data_collator = DataCollatorForSeq2Seq(
+data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer,
-    model=model,
-    padding=True,  # set dynamic padding during training (True or "longest" for longest in batch, False for no padding)
+    # mlm=True, masked language modeling task, BERT
+    # mlm=False, causal language modeling, GPT
+    mlm=False,
+    # model=model,
+    # 就没这个参数，，，
+    # padding=True,  # set dynamic padding during training (True or "longest" for longest in batch, False for no padding)
 )
-
-# 评估就不看了，毕竟我也不做翻译
-# Evaluation metric
-metric = evaluate.load("sacrebleu")
-
-
-def compute_metrics(eval_preds):
-    preds, labels = eval_preds
-    if isinstance(preds, tuple):
-        preds = preds[0]
-
-    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-
-    # Replace -100 in labels as we can't decode them
-    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-
-    # Compute BLEU score
-    result = metric.compute(
-        predictions=decoded_preds, references=[[ref] for ref in decoded_labels]
-    )
-    return {"bleu": result["score"]}
 
 
 # Training arguments
-training_args = Seq2SeqTrainingArguments(
+training_args = TrainingArguments(
     output_dir=f"./huggingface/lora/{model_name}-lora",
-    learning_rate=1e-3,
-    per_device_train_batch_size=4,
-    per_device_eval_batch_size=4,
-    num_train_epochs=2,
-    weight_decay=0.01,
-    eval_strategy="epoch",
-    save_strategy="epoch",
+    learning_rate=2e-4,
+    per_device_train_batch_size=1,
+    # 加了这么一些参数
+    # num_train_epochs=2,
+    gradient_accumulation_steps=16,  # 这个应该是加快训练速度的
+    warmup_steps=100,
+    max_steps=3000,
+    # in the model setting, we use 4bit quantization
+    # and in this training set, we use bf16
+    # this told huggingface to use mixed precision training
+    # fp16=True,  # Use mixed precision training
+    bf16=True,
+    # per_device_eval_batch_size=4,
+    # weight_decay=0.01,
+    # eval_strategy="epoch",
+    save_strategy="steps",
+    save_steps=500,  # Save every 500 steps
     load_best_model_at_end=True,
-    predict_with_generate=True,  # Enable generation for evaluation
+    # predict_with_generate=True,  # Enable generation for evaluation
     logging_steps=10,  # Log every 10 steps
 )
 
 # Trainer
-trainer = Seq2SeqTrainer(
+trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_datasets["train"],
-    eval_dataset=tokenized_datasets["validation"],
-    tokenizer=tokenizer,
+    # eval_dataset=tokenized_datasets["validation"],
+    # tokenizer=tokenizer,
     data_collator=data_collator,
-    compute_metrics=compute_metrics,
+    # compute_metrics=compute_metrics,
 )
 
 # Train the model
 trainer.train()
 
 # Save the model
-trainer.save_pretrained(f"./huggingface/lora/{model_name}-finetuned")
+model.save_pretrained(f"./huggingface/lora/{model_name}-finetuned")
+tokenizer.save_pretrained(f"./huggingface/lora/{model_name}-finetuned")

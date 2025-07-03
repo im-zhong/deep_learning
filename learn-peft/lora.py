@@ -34,6 +34,7 @@ model_name = "bigscience/mt0-large"
 # Access to model meta-llama/Llama-3.1-8B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct to ask for access.
 # model_name = "meta-llama/Llama-3.1-8B-Instruct"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+# encoder-decoder models (like T5, BART,
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 
