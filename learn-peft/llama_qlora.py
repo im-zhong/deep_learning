@@ -37,7 +37,11 @@ import numpy as np
 # https://huggingface.co/datasets/yahma/alpaca-cleaned
 dataset = load_dataset("yahma/alpaca-cleaned")
 
-model_name = "meta-llama/Llama-3.1-8B-Instruct"
+# model_name = "meta-llama/Llama-3.1-8B-Instruct"
+# use a small model， 1B
+model_name = "meta-llama/Llama-3.2-1B"
+# TODO：微调完的模型要怎么部署起来？尤其我们是量化微调的？
+
 # Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct/resolve/main/config.json.
 # Access to model meta-llama/Llama-3.1-8B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in.
 # 用llama的模型还得先登录
@@ -83,16 +87,19 @@ bnb_config = BitsAndBytesConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     quantization_config=bnb_config,  # QLoRA quantization
-    device_map="auto",
+    # device_map="auto",
 )
 
 
-# TODO: read the lora paper
+# TODO:done read the lora paper
 # task_type: the task to train for (sequence-to-sequence language modeling in this case)
 # inference_mode: whether you’re using the model for inference or not
 # r: the dimension of the low-rank matrices
 # lora_alpha: the scaling factor for the low-rank matrices
 # lora_dropout: the dropout probability of the LoRA layers
+
+# TODO: read the qlora paper
+# TODO: deploy the original model and instruct fine tune model
 
 
 # Once the LoraConfig is setup, create a PeftModel with the get_peft_model() function.
@@ -161,12 +168,45 @@ def preprocess_function(example):
 
 
 # tokenize dataset
-tokenized_datasets = dataset.map(
+datasets = dataset.map(
     lambda x: {"text": preprocess_function(x)},
-    batched=True,
+    # batched=True,
     # remove_columns=dataset["train"].column_names,  # remove original columns
     # remove_columns=["translation"],  # or you can specify the column to remove
     # desc="Running tokenizer on dataset",
+    load_from_cache_file=True,
+)
+
+
+## ...
+# 忘了tokenize了
+# 用 tokenizer 把 text 转成 input_ids 和 labels
+# 因为trainer需要这两个信息
+# 又因为这是自回归语言模型 input_ids和labels是一样的
+def tokenize_function(examples):
+    # tokenizer(examples["text"], truncation=True, max_length=512)
+    # 我这里没有做truncation，
+    return tokenizer(examples["text"])
+    # result = tokenizer(examples["text"])
+    # result["labels"] = result["input_ids"].copy()
+    # return result
+
+
+# TODO
+# 这个地方还有一个关键的问题
+# chatgpt告诉我需要同时这个 input_ids 和 labels 并且因为是自回归的，labels相比input_ids需要shift
+# 但是我没有设置，代码反而成功运行了
+# 我需要查看官方的例子，确认这一点！
+
+
+# 又忘了做dynamic padding
+# 可以在tokenize的时候做static padding，就是预先把所有example都pad到相同的长度
+# 也可以在训练的时候，load数据的时候根据batch做dynamic padding
+
+tokenized_datasets = datasets.map(
+    tokenize_function,
+    # batched=True,
+    remove_columns=dataset["train"].column_names,
     load_from_cache_file=True,
 )
 
@@ -191,6 +231,7 @@ data_collator = DataCollatorForLanguageModeling(
     # mlm=True, masked language modeling task, BERT
     # mlm=False, causal language modeling, GPT
     mlm=False,
+    # 这里已经自动做了 dynamic padding
     # model=model,
     # 就没这个参数，，，
     # padding=True,  # set dynamic padding during training (True or "longest" for longest in batch, False for no padding)
@@ -217,7 +258,9 @@ training_args = TrainingArguments(
     # eval_strategy="epoch",
     save_strategy="steps",
     save_steps=500,  # Save every 500 steps
-    load_best_model_at_end=True,
+    # 因为没有eval 所以没有办法判断best model
+    # 就微调完了就结束了
+    # load_best_model_at_end=True,
     # predict_with_generate=True,  # Enable generation for evaluation
     logging_steps=10,  # Log every 10 steps
 )
