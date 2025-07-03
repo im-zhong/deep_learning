@@ -87,7 +87,10 @@ bnb_config = BitsAndBytesConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     quantization_config=bnb_config,  # QLoRA quantization
-    # device_map="auto",
+    # device map is auto will automatically cut the model to different GPUs
+    # but quantization only support single GPU
+    # ValueError: You can't train a model that has been loaded in 8-bit or 4-bit precision on a different device than the one you're training on. Make sure you loaded the model on the correct device using for example `device_map={'':torch.cuda.current_device()}` or `device_map={'':torch.xpu.current_device()}`
+    #  device_map="auto",
 )
 
 
@@ -186,10 +189,20 @@ datasets = dataset.map(
 def tokenize_function(examples):
     # tokenizer(examples["text"], truncation=True, max_length=512)
     # 我这里没有做truncation，
-    return tokenizer(examples["text"])
+    # return tokenizer(examples["text"])
     # result = tokenizer(examples["text"])
     # result["labels"] = result["input_ids"].copy()
     # return result
+
+    result = tokenizer(
+        examples["text"],
+        truncation=True,
+        max_length=512,
+        padding="max_length",  # # 必须静态 padding
+        # 否则报错 ValueError: Unable to create tensor, you should probably activate truncation and/or padding with 'padding=True' 'truncation=True' to have batched tensors with the same length. Perhaps your features (labels in this case) have excessive nesting (inputs type list where type int is expected).
+    )
+    result["labels"] = result["input_ids"].copy()
+    return result
 
 
 # TODO
@@ -205,7 +218,7 @@ def tokenize_function(examples):
 
 tokenized_datasets = datasets.map(
     tokenize_function,
-    # batched=True,
+    batched=True,
     remove_columns=dataset["train"].column_names,
     load_from_cache_file=True,
 )
@@ -263,6 +276,8 @@ training_args = TrainingArguments(
     # load_best_model_at_end=True,
     # predict_with_generate=True,  # Enable generation for evaluation
     logging_steps=10,  # Log every 10 steps
+    # ⭐ 关键：必须显式告诉 Trainer labels 的名字，否则警告 No label_names provided for model class `PeftModelForCausalLM`. Since `PeftModel` hides base models input arguments, if label_names is not given, label_names can't be set automatically within `Trainer`. Note that empty label_names list will be used instead.
+    label_names=["labels"],
 )
 
 # Trainer
