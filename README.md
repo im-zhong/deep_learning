@@ -8,6 +8,7 @@ My Deep Learning Codes.
 1. [ ] read the qlora paper
 2. [ ] deploy the original model and instruct fine tune model
 3. [ ] check the official qlora tutorial on hugging face, refine my code now.
+4. [ ] figure out why my qlora do not support quantization fine tune.
 
 
 ## Structure

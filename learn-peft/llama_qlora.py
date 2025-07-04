@@ -4,6 +4,10 @@
 # 这个chat给出了两种模型微调在数据处理上的对比
 # https://chat.deepseek.com/a/chat/s/e2c9e0b6-d57d-4c8a-b7cc-8c122e58a377
 
+# I found two very useful doc
+# 1. https://huggingface.co/docs/peft/en/developer_guides/lora#qlora-style-training
+# 2. https://huggingface.co/docs/peft/en/developer_guides/lora#merge-lora-weights-into-the-base-model
+
 
 # Train
 # Each PEFT method is defined by a PeftConfig class that stores all the important parameters for building a PeftModel.
@@ -65,6 +69,11 @@ tokenizer.pad_token = tokenizer.eos_token  # Very important for causal LM
 
 # 原来这样配置就成了QLoRA了
 # quantization
+# https://huggingface.co/docs/peft/en/developer_guides/quantization
+# However, after a model is quantized it isn’t typically further trained for downstream tasks because training can be unstable due to the lower precision of the weights and activations
+#  But since PEFT methods only add extra trainable parameters, this allows you to train a quantized model with a PEFT adapter on top
+# , QLoRA is a method that quantizes a model to 4-bits and then trains it with LoRA
+#  finetune a 65B parameter model on a single 48GB GPU!
 bnb_config = BitsAndBytesConfig(
     # 4-bit quantization saves memory on the model side
     # Model Weights 4-bit quantized
@@ -230,7 +239,9 @@ peft_config = LoraConfig(
     r=8,
     lora_alpha=16,
     lora_dropout=0.05,
-    target_modules=["q_proj", "v_proj"],  # For LLaMA, these are common
+    target_modules="all-linear",  # QLoRA
+    # target_modules=["q_proj", "v_proj"],  # For LLaMA, these are common
+    bias="none",
 )
 
 model = get_peft_model(model, peft_config)
