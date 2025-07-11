@@ -10,6 +10,8 @@ dependencies = [
     "evaluate>=0.4.4",
     "huggingface-hub[cli]>=0.33.2",
     "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
     "peft>=0.15.2",
     "sacrebleu>=2.5.1",
+    "timm>=1.0.17",
 ]
