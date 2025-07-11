@@ -2,14 +2,17 @@
 
 My Deep Learning Codes.
 
-
 ## TODO
 
-1. [ ] read the qlora paper
-2. [ ] deploy the original model and instruct fine tune model
-3. [ ] check the official qlora tutorial on hugging face, refine my code now.
-4. [ ] figure out why my qlora do not support quantization fine tune.
-
+1. qlora
+   1. [x] read the qlora paper
+   2. [x] deploy the original model and instruct fine tune model
+   3. [x] check the official qlora tutorial on hugging face, refine my code now.
+   4. [ ] figure out why my qlora do not support quantization fine tune
+2. tokenizer
+   1. [ ] read the hugging face tutorial: <https://huggingface.co/docs/transformers/tokenizer_summary> and watch the video
+   2. [ ] read the BPE, WordPiece, Unigram, SentencePiece paper and write notes on it
+   3. [ ] train my own BPE tokenizer, use the tiktoken, just like gpt and llama
 
 ## Structure
 
@@ -40,6 +43,7 @@ My Deep Learning Codes.
 - [] test模型和train模型要分开，要让测试总是可以很快的很简单的运行，而不是每次都要调整参数
 
 ## DataMining Ideas
+
 1. 根据AlexNet和ResNet在做一个数据集的分类，数据处理，实现，调参都可以参考他们
 2. 然后根据AlexNet的思想做一个以图搜图的分类，基本的实现思路是：用预训练好的模型做特征提取，然后把所有测试集的图片都放在经过预训练模型输出的向量全部保存起来，然后系统读取一张图片，经过特征提取之后，遍历所有的测试集的图片，然后输出top-5向量距离最近的图片，当然这个向量距离可以有多种计算方式，比如1范数，2范数等等。
 3. 还有一个idea是如果給我们训练好的模型一个不在测试类别里面的图片，模型能否正确的识别出来呢？这又如何体现在向量距离上呢？也就是我们的以图搜图的应用能否识别不存在的类别并输出“不认识这个图片”，而不是硬给出一些图片。
@@ -68,4 +72,4 @@ My Deep Learning Codes.
 
 1. pip install torch torchvision torchaudio
 2. pip install tensorboard numpy matplotlib tqdm pytest torchsummary ipykernel tsnecuda SciPy
-3. TODO: 安装tsnecuda还挺麻烦的 需要装一些别的库 https://github.com/CannyLab/tsne-cuda
+3. TODO: 安装tsnecuda还挺麻烦的 需要装一些别的库 <https://github.com/CannyLab/tsne-cuda>
