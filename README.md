@@ -10,9 +10,11 @@ My Deep Learning Codes.
    3. [x] check the official qlora tutorial on hugging face, refine my code now.
    4. [ ] figure out why my qlora do not support quantization fine tune
 2. tokenizer
-   1. [ ] read the hugging face tutorial: <https://huggingface.co/docs/transformers/tokenizer_summary> and watch the video
-   2. [ ] read the BPE, WordPiece, Unigram, SentencePiece paper and write notes on it
-   3. [ ] train my own BPE tokenizer, use the tiktoken, just like gpt and llama
+   1. [x] read the hugging face tutorial: <https://huggingface.co/docs/transformers/tokenizer_summary>
+   2. [ ] watch the video
+   3. [ ] read the BPE, WordPiece, Unigram, SentencePiece paper and write notes on it
+   4. [ ] train my own BPE tokenizer, use the tiktoken, just like gpt and llama
+3. 0.1B差不多就是GPT2的水平啊，能train一个这玩意出来也牛逼死了啊。我要train！！！我之前看过一些教程来着，可以翻出来，train！
 
 ## Structure
 
@@ -20,7 +22,6 @@ My Deep Learning Codes.
 2. every single other networks, use a separate folder, and group by them by categories, such as CNN, GPT, Diffusion, etc
 3. how would that be? I don't want to use PYTHONPATH, so how to structure my code?
 4. dl/mytorch, dl/modules/CNN, LeNet, Transformers, ..., whereis my tests? it should be close to my code
-5.
 
 因为python的路径寻找规则，当我们使用vscode直接运行当前文件的时候，python解释器会从python脚本的路径开始查找其他的模块，这当然找不到，所以我们的解决方案就是使用pytest来运行所有的程序，这样的话所有的程序都是写成单元测试的样子，这种方式非常有效！
 
@@ -40,7 +41,7 @@ My Deep Learning Codes.
 - [x] 额外实现一个BERTTrainer 主要是accuracy等等的计算和其他的模型太不一样了, 然后利用pytorch的DistributedDataParallel来实现并行训练, 不对 不应该重写，应该仔细思考不同的模型之间训练时的共同点和差异，比如这次是accuracy_batch和summary_write不同，那么我们应该提供一种方法 让不同的模型提供自己的方法 而其他的部分仍然复用 这才是最合理的方式
 - [x] 重构WikiTextDataset，修复不同的数据集使用不同的字典的bug，优化流程
 - [x] 增加训练集的accuracy的功能 更加全面的展示数据 更有助于分析模型和实现
-- [] test模型和train模型要分开，要让测试总是可以很快的很简单的运行，而不是每次都要调整参数
+- [ ] test模型和train模型要分开，要让测试总是可以很快的很简单的运行，而不是每次都要调整参数
 
 ## DataMining Ideas
 
