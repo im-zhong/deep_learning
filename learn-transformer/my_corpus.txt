@@ -1,0 +1,6 @@
+hello world!
+你好，世界！
+GPT-2 is awesome.
+Byte-level BPE supports emojis 👋 and symbols ©®👍.
+Hello, world!
+How are you?
