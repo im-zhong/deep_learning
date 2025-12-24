@@ -21,6 +21,7 @@ from mytorch import func
 # https://pytorch.org/docs/stable/generated/torch.nn.Module.html
 # 其实nn.Module是有这个函数的
 
+
 class LinearRegressionScratch(nn.Module):
     # 这是我们的第一个模型
     def __init__(self, in_features: int) -> None:
@@ -60,10 +61,14 @@ class LinearRegressionScratch(nn.Module):
 
     def forward(self, X: Tensor) -> Tensor:
         if self.w is None:
-            self.w = nn.Parameter(torch.randn(size=(self.in_features, 1), requires_grad=True,
-                                              device=X.device))
-            self.b = nn.Parameter(torch.randn(size=(1,), requires_grad=True,
-                                              device=X.device))
+            self.w = nn.Parameter(
+                torch.randn(
+                    size=(self.in_features, 1), requires_grad=True, device=X.device
+                )
+            )
+            self.b = nn.Parameter(
+                torch.randn(size=(1,), requires_grad=True, device=X.device)
+            )
         return X @ self.w + self.b
 
 
@@ -87,7 +92,6 @@ class LinearRegression(nn.Module):
 
 
 class LinearClassifierScratch(nn.Module):
-
     def __init__(self, in_features: int, out_features: int, sigma: float = 0.01):
         super().__init__()
         self.in_features = in_features
@@ -120,10 +124,18 @@ class LinearClassifierScratch(nn.Module):
         x = torch.flatten(x, start_dim=1)
 
         if self.w is None:
-            self.w = nn.Parameter(data=torch.randn(size=(self.in_features, self.out_features),
-                                                   requires_grad=True, device=x.device))
-            self.b = nn.Parameter(data=torch.randn(size=(1, self.out_features),
-                                                   requires_grad=True, device=x.device))
+            self.w = nn.Parameter(
+                data=torch.randn(
+                    size=(self.in_features, self.out_features),
+                    requires_grad=True,
+                    device=x.device,
+                )
+            )
+            self.b = nn.Parameter(
+                data=torch.randn(
+                    size=(1, self.out_features), requires_grad=True, device=x.device
+                )
+            )
 
         y_hat = x @ self.w + self.b
         return y_hat
@@ -143,7 +155,7 @@ class LinearClassifier(nn.Module):
             # Flattens a contiguous range of dims into a tensor.
             # For use with Sequential.
             nn.Flatten(),
-            nn.LazyLinear(out_features)
+            nn.LazyLinear(out_features),
         )
 
     def forward(self, x):
@@ -151,8 +163,16 @@ class LinearClassifier(nn.Module):
 
 
 class MLPScratch(nn.Module):
-    def __init__(self, in_features: int, out_features: int, num_hidden_1: int, num_hidden_2: int,
-                 dropout_1: float = 0.0, dropout_2: float = 0.0, device: device = torch.device('cpu')) -> None:
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        num_hidden_1: int,
+        num_hidden_2: int,
+        dropout_1: float = 0.0,
+        dropout_2: float = 0.0,
+        device: device = torch.device("cpu"),
+    ) -> None:
         super().__init__()
         # we should not use this dynamic add attr to a class
         # it is bad for type checker
@@ -167,17 +187,31 @@ class MLPScratch(nn.Module):
 
         # default_device: str = mytorch.config.conf['device']
         self.W1 = torch.normal(
-            0, 0.01, (in_features, num_hidden_1), requires_grad=True, device=self.device)
-        self.b1 = torch.normal(0, 0.01, (1, num_hidden_1),
-                               requires_grad=True, device=self.device)
+            0, 0.01, (in_features, num_hidden_1), requires_grad=True, device=self.device
+        )
+        self.b1 = torch.normal(
+            0, 0.01, (1, num_hidden_1), requires_grad=True, device=self.device
+        )
         self.W2 = torch.normal(
-            0, 0.01, (num_hidden_1, num_hidden_2), requires_grad=True, device=self.device)
-        self.b2 = torch.normal(0, 0.01, (1, num_hidden_2),
-                               requires_grad=True, device=self.device)
+            0,
+            0.01,
+            (num_hidden_1, num_hidden_2),
+            requires_grad=True,
+            device=self.device,
+        )
+        self.b2 = torch.normal(
+            0, 0.01, (1, num_hidden_2), requires_grad=True, device=self.device
+        )
         self.W3 = torch.normal(
-            0, 0.01, (num_hidden_2, out_features), requires_grad=True, device=self.device)
-        self.b3 = torch.normal(0, 0.01, (1, out_features),
-                               requires_grad=True, device=self.device)
+            0,
+            0.01,
+            (num_hidden_2, out_features),
+            requires_grad=True,
+            device=self.device,
+        )
+        self.b3 = torch.normal(
+            0, 0.01, (1, out_features), requires_grad=True, device=self.device
+        )
 
     def forward(self, X: Tensor) -> Tensor:
         # step 1. flatten
@@ -218,7 +252,7 @@ class MLP(nn.Module):
             nn.LazyLinear(num_hidden_2),
             nn.ReLU(),
             nn.Dropout(dropout_2),
-            nn.LazyLinear(out_features)
+            nn.LazyLinear(out_features),
         )
 
     def forward(self, X):
