@@ -5,7 +5,9 @@ description = "My Deep Learning Codes"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "bitsandbytes>=0.46.1",
+    # "bitsandbytes>=0.46.1",
+    # ✅ bitsandbytes is NOT available on macOS arm64
+    "bitsandbytes>=0.46.1; sys_platform != 'darwin'",
     "datasets>=3.6.0",
     "evaluate>=0.4.4",
     "huggingface-hub[cli]>=0.33.2",
