@@ -51,6 +51,7 @@ class RolloutStep:
     reward: np.float64
     terminated: bool
     log_prob: torch.Tensor
+    entropy: torch.Tensor
     # truncated: bool
 
     # @property
@@ -74,7 +75,7 @@ def sample_rollout(
     curr_terminated = env.is_terminated()
 
     for _ in range(rollout_steps):
-        action, log_prob = agent.sample_action(state=curr_state)
+        action, log_prob, entropy = agent.sample_action(state=curr_state)
 
         next_obs, reward, terminated = env.step(action=action)
 
@@ -85,6 +86,7 @@ def sample_rollout(
                 terminated=curr_terminated,
                 log_prob=log_prob,
                 action=action,
+                entropy=entropy,
             )
         )
 
@@ -113,6 +115,7 @@ def sample_rollout(
             reward=0,
             terminated=curr_terminated,
             log_prob=torch.tensor(0),
+            entropy=torch.tensor(0),
         )
     )
 
@@ -127,6 +130,7 @@ class Rollout:
     actions: torch.Tensor
     rewards: list[np.float64]
     log_probs: torch.Tensor
+    entropy: torch.Tensor
     next_observation: torch.Tensor
     terminated: bool
     truncated: bool = False
@@ -142,12 +146,14 @@ def sample_rollout_v2(agent: AgentBase, env: EnvBase, rollout_steps: int) -> Rol
     log_probs: list[torch.Tensor] = []
     actions: list[np.int64] = []
     terminateds: list[bool] = []
+    entropys: list[torch.Tensor] = []
     for step in rollout[:-1]:
         observations.append(step.observation)
         rewards.append(step.reward)
         log_probs.append(step.log_prob)
         actions.append(step.action)
         terminateds.append(step.terminated)
+        entropys.append(step.entropy)
     return Rollout(
         observations=torch.tensor(observations),
         actions=torch.tensor(actions),
@@ -161,4 +167,5 @@ def sample_rollout_v2(agent: AgentBase, env: EnvBase, rollout_steps: int) -> Rol
         # terminateds,
         next_observation=torch.tensor(rollout[-1].observation),
         terminated=rollout[-1].terminated,
+        entropy=torch.stack(entropys),
     )

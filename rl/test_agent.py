@@ -18,7 +18,9 @@ class AgentBase(ABC, nn.Module):
         super().__init__()
 
     @abstractmethod
-    def sample_action(self, state: np.ndarray) -> tuple[np.int64, torch.Tensor]:
+    def sample_action(
+        self, state: np.ndarray
+    ) -> tuple[np.int64, torch.Tensor, torch.Tensor]:
         pass
 
     @abstractmethod
@@ -62,9 +64,11 @@ class SimpleActorCritic(AgentBase):
         return self.value_head(embedding)
 
     @override
-    def sample_action(self, state: np.ndarray) -> tuple[np.int64, torch.Tensor]:
+    def sample_action(
+        self, state: np.ndarray
+    ) -> tuple[np.int64, torch.Tensor, torch.Tensor]:
         logits: torch.Tensor = self.policy_forward(state=torch.tensor(data=state))
         probs = Categorical(logits=logits)
         actions: torch.Tensor = probs.sample()
         # 只有log prob是需要携带梯度的
-        return np.int64(actions.item()), probs.log_prob(value=actions)
+        return np.int64(actions.item()), probs.log_prob(value=actions), probs.entropy()

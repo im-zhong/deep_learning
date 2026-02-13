@@ -32,47 +32,19 @@ class A2CTrainer:
         self.gamma = gamma
         self.lambda_ = lambda_
 
-    def compute_value_loss(
-        self, values: torch.Tensor, batch_rewards_to_go: list[float]
-    ) -> torch.Tensor:
-        rewards = torch.tensor(batch_rewards_to_go)
-        # assert values.squeeze(-1).shape == rewards.shape
-
-        loss = torch.mean((values.squeeze(dim=-1) - rewards).pow(2))
-        return loss
-
-    def compute_loss(
-        self,
-        batch_log_probs: list[torch.Tensor],
-        batch_rewards_to_go: list[float],
-        batch_vt: list[float] = [0],
-    ) -> torch.Tensor:
-
-        batch_size = len(batch_log_probs)
-
-        grads = [
-            log_probs * (rewards - vt)
-            for log_probs, rewards, vt in zip(
-                batch_log_probs, batch_rewards_to_go, batch_vt
-            )
-        ]
-
-        # BUG!!! 这一步是构建一个新的tensor，然后把旧的值给复制过来，所以不会保留计算图，requireds_grad=False
-        # grads_tensor = torch.tensor(grads)
-        grads_tensor = torch.stack(grads)
-        assert grads_tensor.shape == (batch_size, 1)
-        loss = -grads_tensor.mean()
-        return loss
-
     def train(self) -> None:
-        for epoch in tqdm(range(self.max_epochs)):
-            self.train_one_epoch(self.env, self.agent, self.optimizer)
+        for epoch in range(self.max_epochs):
+            self.train_one_epoch(epoch, self.env, self.agent, self.optimizer)
 
     # 好像还真不行，不同的算法的采样数据的方式和计算loss的方式不一样！
     # 不如把这个train one epoch扔给每个算法自己实现？
     # 其实咱总共就实现两个算法啊 A2C 和PPO 先不管了
     def train_one_epoch(
-        self, env: EnvBase, agent: AgentBase, optimizer: torch.optim.Optimizer
+        self,
+        epoch: int,
+        env: EnvBase,
+        agent: AgentBase,
+        optimizer: torch.optim.Optimizer,
     ):
         # 1. collect training data of this epoch
         # batch_states, batch_actions, batch_log_probs, batch_rewards_to_go = (
@@ -82,7 +54,10 @@ class A2CTrainer:
         rollout = sample_rollout_v2(agent, env, self.rollout_step)
 
         # 咱们把rewards給加起来，看看训练的效果
-        print("rewards: ", sum(rollout.rewards))
+        print(
+            f"epoch: {epoch}: rewards:, {len(rollout.rewards)}, {sum(rollout.rewards)}",
+            flush=True,
+        )
 
         # sample_rollout_v2(agent, env, self.rollout_step)
 
@@ -121,27 +96,36 @@ class A2CTrainer:
                 )
 
             # TODO: 应该重构成返回tensor
-            returns = compute_returns(rewards=rollout.rewards, bootstrap=bootstrap)
+            returns = compute_returns(
+                rewards=rollout.rewards, bootstrap=bootstrap, gamma=self.gamma
+            )
             # 这里需要计算values，我们可以重复计算，这里不进行梯度计算，可以和PPO更好的融合
-            values: torch.Tensor = agent.value_forward(state=rollout.observations)
-            # advantages = compute_gaes(
-            #     rollout.rewards,
-            #     values,
-            #     bootstrap,
-            #     gamma=self.gamma,
-            #     lambda_=self.lambda_,
-            # )
-            advantages = returns - values
+            values: torch.Tensor = agent.value_forward(
+                state=rollout.observations
+            ).squeeze(dim=-1)
+            advantages = compute_gaes(
+                rollout.rewards,
+                values,
+                bootstrap,
+                gamma=self.gamma,
+                lambda_=self.lambda_,
+            )
+            # advantages = returns - values
+            # 加上一个mormalize操作
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # 4. policy compute loss and value loss
         # 大问题！我这样计算出来的loss是没有梯度的！为什么？
         # policy_loss = compute_loss(
         #     batch_log_probs, batch_rewards_to_go, batch_vt=batch_vt
         # )
+        assert rollout.log_probs.shape == advantages.shape == values.shape
+
         policy_loss = -(rollout.log_probs * advantages).mean()
         values = agent.value_forward(state=rollout.observations).squeeze(dim=-1)
         value_loss = (values - returns).pow(2).mean()
-        loss = policy_loss + value_loss
+        entropy = rollout.entropy.mean()
+        loss = policy_loss + 0.5 * value_loss - 0.01 * entropy
 
         # 5. policy net backward propogation
         loss.backward()
@@ -180,6 +164,28 @@ def test_A2C_trainer():
         rollout_step=256,
         gamma=0.99,
         lambda_=0.9,
+    )
+
+    trainer.train()
+
+
+def test_A2C_trainer_on_lunar_lander():
+    env = LunarLander()
+    assert env.observation_space()[0] == 8
+    assert env.action_space() == 4
+
+    agent = SimpleActorCritic(
+        observation_shape=env.observation_space()[0], action_shape=env.action_space()
+    )
+
+    trainer = A2CTrainer(
+        agent=agent,
+        env=env,
+        max_epochs=10000,
+        lr=0.0001,
+        rollout_step=256,
+        gamma=0.99,
+        lambda_=0.95,
     )
 
     trainer.train()
