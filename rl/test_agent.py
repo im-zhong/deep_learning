@@ -43,25 +43,37 @@ class SimpleActorCritic(AgentBase):
         # 然后让这两个网络共享参数
 
         # 这次的state是连续的，所以就没有state embedding了
-        self.encoder = nn.Sequential(
+        # TIP: 我真的服了！我在这里写了这么半天！原来是共享网络参数的问题！！！两个网络共享参数的话，非常难训练！
+        self.policy_net = nn.Sequential(
             nn.Linear(in_features=observation_shape, out_features=32),
             nn.ReLU(),
             nn.Linear(in_features=32, out_features=128),
             nn.ReLU(),
             nn.Linear(in_features=128, out_features=32),
+            nn.ReLU(),
+            nn.Linear(in_features=32, out_features=action_shape),
         )
-        self.policy_head = nn.Linear(in_features=32, out_features=action_shape)
-        self.value_head = nn.Linear(in_features=32, out_features=1)
+        self.value_net = nn.Sequential(
+            nn.Linear(in_features=observation_shape, out_features=32),
+            nn.ReLU(),
+            nn.Linear(in_features=32, out_features=128),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=32),
+            nn.ReLU(),
+            nn.Linear(in_features=32, out_features=1),
+        )
+        # self.policy_head = nn.Linear(in_features=32, out_features=action_shape)
+        # self.value_head = nn.Linear(in_features=32, out_features=1)
 
     @override
     def policy_forward(self, state: torch.Tensor) -> torch.Tensor:
-        embedding: torch.Tensor = self.encoder(state)
-        return self.policy_head(embedding)
+        # embedding: torch.Tensor = self.encoder(state)
+        return self.policy_net(state)
 
     @override
     def value_forward(self, state: torch.Tensor) -> torch.Tensor:
-        embedding: torch.Tensor = self.encoder(state)
-        return self.value_head(embedding)
+        # embedding: torch.Tensor = self.encoder(state)
+        return self.value_net(state)
 
     @override
     def sample_action(

@@ -96,8 +96,10 @@ class A2CTrainer:
                 )
 
             # TODO: 应该重构成返回tensor
-            returns = compute_returns(
-                rewards=rollout.rewards, bootstrap=bootstrap, gamma=self.gamma
+            returns = torch.as_tensor(
+                compute_returns(
+                    rewards=rollout.rewards, bootstrap=bootstrap, gamma=self.gamma
+                )
             )
             # 这里需要计算values，我们可以重复计算，这里不进行梯度计算，可以和PPO更好的融合
             values: torch.Tensor = agent.value_forward(
